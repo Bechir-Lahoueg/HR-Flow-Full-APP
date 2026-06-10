@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.example.ui.controller.Admin.AdminLeaveExceptionsController"
+      spacing="20">
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+    <!-- ===== HEADER ===== -->
+    <HBox alignment="CENTER_LEFT" spacing="12"
+          style="-fx-background-color: white; -fx-padding: 16 20; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);">
+        <Label text="🚨" style="-fx-font-size: 24px;"/>
+        <VBox spacing="2">
+            <Label text="Congés Exceptionnels — Validation Admin"
+                   style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2d3748;"/>
+            <Label text="Demandes pré-approuvées par RH en attente de votre décision finale"
+                   style="-fx-font-size: 12px; -fx-text-fill: #718096;"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="statusLabel" text="0 demande(s)"
+               style="-fx-font-size: 12px; -fx-text-fill: #718096; -fx-font-weight: bold; -fx-background-color: #edf2f7; -fx-padding: 5 14; -fx-background-radius: 6;"/>
+        <Button text="🔄 Actualiser" onAction="#refresh"
+                style="-fx-background-color: #4a5568; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 8 16; -fx-background-radius: 7; -fx-cursor: hand;"/>
+    </HBox>
+
+    <!-- ===== TABLEAU ===== -->
+    <VBox spacing="12" VBox.vgrow="ALWAYS"
+          style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.09), 10, 0, 0, 3);">
+        <TableView fx:id="exceptionsTable" prefHeight="350" VBox.vgrow="ALWAYS"
+                   style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-border-radius: 8; -fx-font-size: 13px;">
+            <columns>
+                <TableColumn fx:id="idColumn"          text="ID"           prefWidth="55"  style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="employeeColumn"    text="👤 Employé"    prefWidth="180"/>
+                <TableColumn fx:id="leaveTypeColumn"   text="Type"          prefWidth="150"/>
+                <TableColumn fx:id="startDateColumn"   text="📅 Début"      prefWidth="120" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="endDateColumn"     text="📅 Fin"        prefWidth="120" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="daysColumn"        text="Jours"         prefWidth="70"  style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="urgencyColumn"     text="Urgence"       prefWidth="120" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="workflowColumn"    text="Statut"        prefWidth="160" style="-fx-alignment: CENTER;"/>
+            </columns>
+            <placeholder>
+                <VBox alignment="CENTER" spacing="10" style="-fx-padding: 40;">
+                    <Label text="✅" style="-fx-font-size: 48px; -fx-opacity: 0.3;"/>
+                    <Label text="Aucune demande exceptionnelle en attente"
+                           style="-fx-text-fill: #a0aec0; -fx-font-size: 15px; -fx-font-weight: bold;"/>
+                </VBox>
+            </placeholder>
+        </TableView>
+
+        <!-- Actions -->
+        <HBox spacing="12" alignment="CENTER_LEFT" style="-fx-padding: 4 0 0 0;">
+            <Button fx:id="approveButton" text="✅ Approuver le congé exceptionnel"
+                    style="-fx-background-color: #22c55e; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-padding: 10 24; -fx-background-radius: 7; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0, 0, 1);">
+                <font><Font name="System Bold" size="12.0"/></font>
+            </Button>
+            <Button fx:id="rejectButton" text="❌ Refuser le congé exceptionnel"
+                    style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-padding: 10 24; -fx-background-radius: 7; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0, 0, 1);">
+                <font><Font name="System Bold" size="12.0"/></font>
+            </Button>
+        </HBox>
+    </VBox>
+
+    <!-- ===== JOURNAL D'AUDIT ===== -->
+    <VBox spacing="8"
+          style="-fx-background-color: white; -fx-padding: 16 20; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 8, 0, 0, 2);">
+        <HBox alignment="CENTER_LEFT" spacing="8">
+            <Label text="📋" style="-fx-font-size: 16px;"/>
+            <Label text="Journal d'audit de la demande sélectionnée"
+                   style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2d3748;"/>
+        </HBox>
+        <TextArea fx:id="auditLogArea" prefHeight="120" editable="false" wrapText="true"
+                  promptText="Sélectionnez une demande pour voir son journal d'audit..."
+                  style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-background-color: #f7fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 6;"/>
+    </VBox>
+</VBox>

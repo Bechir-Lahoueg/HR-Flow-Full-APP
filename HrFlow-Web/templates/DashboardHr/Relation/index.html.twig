@@ -1,0 +1,663 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestion des Relations — HRFlow{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    @keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .count-anim{animation:countUp .4s ease-out both}
+    .table-row-hover{transition:all .15s}
+    .table-row-hover:hover{background:#f8fafc}
+
+    /* Relation module color palette */
+    :root {
+        --relation-primary-deep: #022E69;
+        --relation-primary: #145EB7;
+        --relation-accent: #3FA9F5;
+        --relation-border: #D0D0D0;
+    }
+
+    /* High contrast mode support */
+    html.a11y-high-contrast {
+        --relation-primary-deep: #022E69;
+        --relation-primary: #145EB7;
+        --relation-accent: #3FA9F5;
+        --relation-border: #3FA9F5;
+    }
+
+    /* Page container background */
+    #relation-page-container {
+        background-color: #f4f7fb !important;
+    }
+
+    /* Hero banner */
+    .hero-banner-relation {
+        background: linear-gradient(to bottom right, #022E69, #0a3d8f, #051f3d) !important;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="relation-page-container" class="min-h-screen dot-grid">
+
+    {% include 'DashboardHr/components/_sidebar.html.twig' %}
+
+    <div class="lg:ml-[272px] transition-all duration-300">
+
+        {% include 'DashboardHr/components/_header.html.twig' %}
+
+        {% for message in app.flashes('success') %}
+            <div class="mx-6 mt-4 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium flex items-center gap-2 animate-slide-up">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="mx-6 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-2">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% set typeErrors = typeErrors ?? {} %}
+        {% set typeOld = typeOld ?? {} %}
+        {% set typeMode = typeMode ?? null %}
+        {% set typeEditId = typeEditId ?? null %}
+
+        <main class="p-6 space-y-6 max-w-7xl mx-auto">
+
+            {# ══════════ Hero ══════════ #}
+            <section class="hero-banner-relation relative overflow-hidden rounded-2xl text-white p-8 md:p-10 animate-slide-up">
+                <div class="absolute -left-16 bottom-0 h-56 w-56 rounded-full blur-3xl mesh-blob" style="background: radial-gradient(circle, rgba(63, 169, 245, 0.15), transparent 70%);"></div>
+                <div class="absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl mesh-blob-alt" style="background: radial-gradient(circle, rgba(20, 94, 183, 0.15), transparent 70%);"></div>
+                <div class="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: #3FA9F5;"></div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider" style="color: #3FA9F5;">Relations Studio</span>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-extrabold leading-tight">Gestion des Relations</h2>
+                        <p class="mt-3 text-[15px] text-slate-300 max-w-xl leading-relaxed">Demandes, feedbacks employés et évaluations de formations de votre équipe.</p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4" style="background: rgba(255, 255, 255, 0.08);">
+                            <p class="text-[10px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63, 169, 245, 0.7);">En attente</p>
+                            <p class="mt-1 text-3xl font-extrabold font-mono-num">{{ requestStats.pending }}</p>
+                            <p class="text-xs mt-1" style="color: rgba(63, 169, 245, 0.6);">demandes à traiter</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4" style="background: rgba(255, 255, 255, 0.08);">
+                            <p class="text-[10px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63, 169, 245, 0.7);">Feedbacks</p>
+                            <p class="mt-1 text-3xl font-extrabold font-mono-num">{{ totalFeedbacks }}</p>
+                            <p class="text-xs mt-1" style="color: rgba(63, 169, 245, 0.6);">reçus au total</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {# ══════════ Tab Nav ══════════ #}
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden shadow-sm">
+                <div class="flex border-b" style="border-color: #D0D0D0;">
+                    {% set tabs = [
+                        {key: 'requests',  label: 'Demandes',      badge: requestStats.pending},
+                        {key: 'config',    label: 'Config Types',  badge: null},
+                        {key: 'feedbacks', label: 'Feedbacks',     badge: totalFeedbacks},
+                        {key: 'ff',        label: 'Formations',    badge: ffList|length},
+                    ] %}
+                    {% for t in tabs %}
+                    <button onclick="switchTab('{{ t.key }}')"
+                            id="tab-btn-{{ t.key }}"
+                            class="tab-btn flex items-center gap-2 px-6 py-4 text-[13px] font-bold border-b-2 transition-all
+                                   {{ tab == t.key ? 'border-[#145EB7] text-[#145EB7]' : 'border-transparent text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300' }}">
+                        {% if t.key == 'requests' %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% elseif t.key == 'config' %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9m-9 6h9m-9 6h9M4.5 6h.008v.008H4.5V6zm0 6h.008v.008H4.5V12zm0 6h.008v.008H4.5V18z"/></svg>
+                        {% elseif t.key == 'feedbacks' %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75h6.75m-6.75 3h4.5m-6.75 6.375h7.5A2.625 2.625 0 0016.5 16.5V6.75A2.625 2.625 0 0013.875 4.125h-7.5A2.625 2.625 0 003.75 6.75v9.75a2.625 2.625 0 002.625 2.625z"/></svg>
+                        {% else %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l2.5 5 5.5.8-4 3.9.9 5.4-4.9-2.6-4.9 2.6.9-5.4-4-3.9 5.5-.8L12 3z"/></svg>
+                        {% endif %}
+                        {{ t.label }}
+                        {% if t.badge is not null and t.badge > 0 %}
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full {{ tab == t.key ? 'bg-[#145EB7]/10 text-[#145EB7]' : 'bg-zinc-100 text-zinc-500' }}">{{ t.badge }}</span>
+                        {% endif %}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                {# ══════════ TAB: DEMANDES ══════════ #}
+                <div id="panel-requests" class="tab-panel {{ tab != 'requests' ? 'hidden' : '' }} p-6 space-y-5">
+                    {# Stats #}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {% for stat in [
+                            {label: 'Total', value: requestStats.total, color: 'text-zinc-800'},
+                            {label: 'En attente', value: requestStats.pending, color: 'text-amber-600'},
+                            {label: 'Approuvées', value: requestStats.approved, color: 'text-emerald-600'},
+                            {label: 'Rejetées', value: requestStats.rejected, color: 'text-red-600'},
+                        ] %}
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <p class="text-2xl font-extrabold {{ stat.color }} font-mono-num">{{ stat.value }}</p>
+                            <p class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-1">{{ stat.label }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {# Filtres #}
+                    <form method="GET" class="flex flex-wrap gap-3 items-end">
+                        <input type="hidden" name="tab" value="requests">
+                        <input type="text" name="search_req" value="{{ searchReq }}" placeholder="Rechercher..."
+                               class="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm px-3 py-2 focus:border-[#145EB7] focus:ring-2 focus:ring-[#145EB7]/20 focus:outline-none transition-all w-56">
+                        <select name="status" class="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm px-3 py-2 focus:border-[#145EB7] focus:outline-none">
+                            <option value="">Tous les statuts</option>
+                            {% for s in ['pending','approved','rejected','cancelled'] %}
+                            <option value="{{ s }}" {{ statusFilter == s ? 'selected' : '' }}>{{ s|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="px-4 py-2 rounded-lg text-white text-[12px] font-bold transition-all" style="background-color: #145EB7;">Filtrer</button>
+                        {% if statusFilter or searchReq %}<a href="{{ path('rh_relation_index', {tab: 'requests'}) }}" class="px-3 py-2 text-[12px] text-zinc-500 hover:text-zinc-700">✕ Reset</a>{% endif %}
+                    </form>
+
+                    {# Table #}
+                    <div class="overflow-x-auto rounded-xl border" style="border-color: #D0D0D0;">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-[11px] font-bold uppercase tracking-wider text-[#022E69] bg-blue-50" style="background-color: #edf4ff;">
+                                <tr style="border-color: #D0D0D0;">
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Employé</th>
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Titre</th>
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Type</th>
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Priorité</th>
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Statut</th>
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Date</th>
+                                    <th class="py-3 px-4 text-left" style="border-color: #D0D0D0;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for req in requests %}
+                            <tr class="table-row-hover border-t border-zinc-50">
+                                <td class="py-3 px-4 font-semibold text-zinc-700">{{ req.employee_name ?? '-' }}</td>
+                                <td class="py-3 px-4 max-w-[180px] truncate font-medium text-zinc-600">{{ req.title }}</td>
+                                <td class="py-3 px-4"><span class="bg-zinc-100 text-zinc-600 text-[11px] px-2 py-0.5 rounded-md font-medium">{{ req.type_name }}</span></td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
+                                        {{ req.priority == 'high' ? 'bg-red-50 text-red-700 border border-red-200' : '' }}
+                                        {{ req.priority == 'medium' ? 'bg-amber-50 text-amber-700 border border-amber-200' : '' }}
+                                        {{ req.priority == 'low' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : '' }}">
+                                        <span class="inline-block w-2 h-2 rounded-full mr-1 {{ req.priority == 'high' ? 'bg-red-500' : (req.priority == 'medium' ? 'bg-amber-500' : 'bg-emerald-500') }}" aria-hidden="true"></span>
+                                        {{ req.priority|upper }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold
+                                        {{ req.status == 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' : '' }}
+                                        {{ req.status == 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : '' }}
+                                        {{ req.status == 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' : '' }}
+                                        {{ req.status == 'cancelled' ? 'bg-zinc-100 text-zinc-500 border border-zinc-200' : '' }}">
+                                        <span class="w-1.5 h-1.5 rounded-full
+                                            {{ req.status == 'pending' ? 'bg-amber-500' : '' }}
+                                            {{ req.status == 'approved' ? 'bg-emerald-500' : '' }}
+                                            {{ req.status == 'rejected' ? 'bg-red-500' : '' }}
+                                            {{ req.status == 'cancelled' ? 'bg-zinc-400' : '' }}"></span>
+                                        {{ req.status == 'pending' ? 'En attente' : req.status|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-[12px] text-zinc-400">{{ req.submitted_date|date('d/m/Y') }}</td>
+                                <td class="py-3 px-4">
+                                    <div class="flex gap-1.5 flex-wrap">
+                                        {% if req.attachment_url %}
+                                        <a href="{{ req.attachment_url }}" target="_blank"
+                                           class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg text-white border-0 hover:opacity-90 transition-opacity" style="background-color: #145EB7;">Fichier</a>
+                                        {% endif %}
+                                        <button onclick="loadRequestDetails({{ req.id }})"
+                                                class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                                            Details
+                                        </button>
+                                        {% if req.status == 'pending' %}
+                                        <button onclick="openApproveModal({{ req.id }}, '{{ req.title|e('js') }}')"
+                                                class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors">
+                                            Approuver
+                                        </button>
+                                        <button onclick="openRejectModal({{ req.id }}, '{{ req.title|e('js') }}')"
+                                                class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors">
+                                            Rejeter
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="py-12 text-center text-zinc-400 text-sm">Aucune demande trouvée.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# ══════════ TAB: CONFIG TYPES ══════════ #}
+                <div id="panel-config" class="tab-panel {{ tab != 'config' ? 'hidden' : '' }} p-6 space-y-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Types de demandes</h3>
+                        <button onclick="openModal('modalNewType')"
+                                class="px-4 py-2 rounded-lg text-white font-bold text-[12px] transition-all shadow-sm" style="background: linear-gradient(135deg, #145EB7, #3FA9F5);">
+                            Nouveau type
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border" style="border-color: #D0D0D0;">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-[11px] font-bold uppercase tracking-wider text-[#022E69] bg-blue-50" style="background-color: #edf4ff;">
+                                <tr style="border-color: #D0D0D0;">
+                                    <th class="py-3 px-4 text-left">Nom</th>
+                                    <th class="py-3 px-4 text-left">Description</th>
+                                    <th class="py-3 px-4 text-left">Approbation</th>
+                                    <th class="py-3 px-4 text-left">Créé le</th>
+                                    <th class="py-3 px-4 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for rt in requestTypes %}
+                            <tr class="table-row-hover border-t border-zinc-50">
+                                <td class="py-3 px-4 font-semibold text-zinc-700">{{ rt.name }}</td>
+                                <td class="py-3 px-4 text-zinc-500 max-w-[250px] truncate">{{ rt.description ?? '-' }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full {{ rt.requires_approval ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-100 text-zinc-500' }}">
+                                        {{ rt.requires_approval ? 'Requise' : 'Non requise' }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-[12px] text-zinc-400">{{ rt.created_at|date('d/m/Y') }}</td>
+                                <td class="py-3 px-4">
+                                    <div class="flex gap-1.5">
+                                        <button onclick="openEditType({{ rt|json_encode|e('html_attr') }})"
+                                                class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100">Modifier</button>
+                                        <form action="{{ path('rh_relation_request_type_delete', {id: rt.id}) }}" method="POST" class="inline"
+                                              onsubmit="return confirm('Supprimer ce type ?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('rt-delete-' ~ rt.id) }}">
+                                            <button class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">Supprimer</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="py-12 text-center text-zinc-400 text-sm">Aucun type configuré.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# ══════════ TAB: FEEDBACKS EMPLOYÉS ══════════ #}
+                <div id="panel-feedbacks" class="tab-panel {{ tab != 'feedbacks' ? 'hidden' : '' }} p-6 space-y-5">
+                    <div class="grid grid-cols-2 gap-3 md:w-1/2">
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <p class="text-2xl font-extrabold text-cyan-600 font-mono-num">{{ totalFeedbacks }}</p>
+                            <p class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-1">Total</p>
+                        </div>
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <p class="text-2xl font-extrabold text-amber-500 font-mono-num">{{ avgRating }}/5</p>
+                            <p class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-1">Note moy.</p>
+                        </div>
+                    </div>
+
+                    <form method="GET" class="flex flex-wrap gap-3 items-end">
+                        <input type="hidden" name="tab" value="feedbacks">
+                        <input type="text" name="search_fb" value="{{ searchFb }}" placeholder="Rechercher..."
+                               class="rounded-lg border border-zinc-200 bg-zinc-50 text-sm px-3 py-2 focus:border-cyan-400 focus:outline-none w-48">
+                        <select name="feedback_type" class="rounded-lg border border-zinc-200 bg-zinc-50 text-sm px-3 py-2 focus:border-cyan-400 focus:outline-none">
+                            <option value="">Tous les types</option>
+                            {% for ft in feedbackTypes %}
+                            <option value="{{ ft }}" {{ typeFilter == ft ? 'selected' : '' }}>{{ ft|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="px-4 py-2 rounded-lg bg-slate-900 text-white text-[12px] font-bold">Filtrer</button>
+                    </form>
+
+                    <div class="overflow-x-auto rounded-xl border border-zinc-100">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-50/80">
+                                <tr>
+                                    <th class="py-3 px-4 text-left">De</th>
+                                    <th class="py-3 px-4 text-left">À</th>
+                                    <th class="py-3 px-4 text-left">Type</th>
+                                    <th class="py-3 px-4 text-left">Note</th>
+
+                                    <th class="py-3 px-4 text-left">Emotion</th>
+                                    <th class="py-3 px-4 text-left">Statut</th>
+                                    <th class="py-3 px-4 text-left">Date</th>
+                                    <th class="py-3 px-4 text-left">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for fb in feedbacks %}
+                            <tr class="table-row-hover border-t border-zinc-50">
+                                <td class="py-3 px-4 font-medium text-zinc-600">
+                                    {{ fb.is_anonymous ? 'Anonyme' : (fb.from_username ?? '-') }}
+                                </td>
+                                <td class="py-3 px-4 font-medium text-zinc-600">{{ fb.to_username ?? '-' }}</td>
+                                <td class="py-3 px-4"><span class="bg-violet-50 text-violet-700 text-[11px] px-2 py-0.5 rounded-md font-medium">{{ fb.feedback_type }}</span></td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-0.5 text-amber-500">
+                                        {% for i in 1..5 %}
+                                            <svg class="w-3.5 h-3.5 {{ i <= fb.rating ? 'opacity-100' : 'opacity-30' }}" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.12 3.447a1 1 0 00.95.69h3.624c.969 0 1.371 1.24.588 1.81l-2.932 2.13a1 1 0 00-.364 1.118l1.12 3.447c.3.922-.755 1.688-1.54 1.118l-2.932-2.13a1 1 0 00-1.176 0l-2.932 2.13c-.784.57-1.838-.196-1.539-1.118l1.12-3.447a1 1 0 00-.364-1.118L2.78 8.874c-.783-.57-.38-1.81.588-1.81h3.623a1 1 0 00.951-.69l1.12-3.447z"/></svg>
+                                        {% endfor %}
+                                    </span>
+                                    <span class="text-[11px] text-zinc-400 ml-1">{{ fb.rating }}/5</span>
+                                </td>
+                                {% set emotionLabel = (fb.emotion_label ?? 'unknown')|lower %}
+                                {% set emotionScore = ((fb.emotion_score ?? 0) * 100)|round %}
+                                <td class="py-3 px-4">
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
+                                        {{ emotionLabel == 'anger' ? 'bg-red-50 text-red-700 border border-red-200' : '' }}
+                                        {{ emotionLabel == 'joy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : '' }}
+                                        {{ emotionLabel == 'sadness' ? 'bg-blue-50 text-blue-700 border border-blue-200' : '' }}
+                                        {{ emotionLabel == 'fear' ? 'bg-amber-50 text-amber-700 border border-amber-200' : '' }}
+                                        {{ emotionLabel == 'love' ? 'bg-pink-50 text-pink-700 border border-pink-200' : '' }}
+                                        {{ emotionLabel == 'surprise' ? 'bg-violet-50 text-violet-700 border border-violet-200' : '' }}
+                                        {{ emotionLabel not in ['anger','joy','sadness','fear','love','surprise'] ? 'bg-zinc-100 text-zinc-500 border border-zinc-200' : '' }}">
+                                        {{ emotionLabel|capitalize }} {{ emotionScore }}%
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
+                                        {{ fb.status == 'submitted' ? 'bg-cyan-50 text-cyan-700' : 'bg-zinc-100 text-zinc-500' }}">
+                                        {{ fb.status == 'submitted' ? 'Soumis' : 'Traité' }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-[12px] text-zinc-400">{{ fb.created_at|date('d/m/Y') }}</td>
+                                <td class="py-3 px-4">
+                                    <div class="flex gap-1.5">
+                                        <button onclick="loadFeedbackDetails({{ fb.id }})"
+                                                class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200">Voir</button>
+                                        {% if fb.status == 'submitted' %}
+                                        <form action="{{ path('rh_relation_feedback_acknowledge', {id: fb.id}) }}" method="POST" class="inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('fb-ack-' ~ fb.id) }}">
+                                            <button class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">✓ Traiter</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="8" class="py-12 text-center text-zinc-400 text-sm">Aucun feedback.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# ══════════ TAB: FEEDBACKS FORMATION ══════════ #}
+                <div id="panel-ff" class="tab-panel {{ tab != 'ff' ? 'hidden' : '' }} p-6 space-y-5">
+                    <div class="grid grid-cols-3 gap-3 md:w-2/3">
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <p class="text-2xl font-extrabold text-violet-600 font-mono-num">{{ ffList|length }}</p>
+                            <p class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-1">Total avis</p>
+                        </div>
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <p class="text-2xl font-extrabold text-amber-500 font-mono-num">{{ ffAvg }}/5</p>
+                            <p class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-1">Note moy.</p>
+                        </div>
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <p class="text-2xl font-extrabold text-emerald-600 font-mono-num">{{ ffRecRate }}%</p>
+                            <p class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-1">Recommandée</p>
+                        </div>
+                    </div>
+
+                    <form method="GET" class="flex gap-3 items-end">
+                        <input type="hidden" name="tab" value="ff">
+                        <select name="ff_formation" class="rounded-lg border border-zinc-200 bg-zinc-50 text-sm px-3 py-2 focus:border-cyan-400 focus:outline-none">
+                            <option value="">Toutes les formations</option>
+                            {% for fname in ffFormations %}
+                            <option value="{{ fname }}" {{ ffFormFilter == fname ? 'selected' : '' }}>{{ fname }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="px-4 py-2 rounded-lg bg-slate-900 text-white text-[12px] font-bold">Filtrer</button>
+                    </form>
+
+                    <div class="overflow-x-auto rounded-xl border border-zinc-100">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-50/80">
+                                <tr>
+                                    <th class="py-3 px-4 text-left">Employé</th>
+                                    <th class="py-3 px-4 text-left">Formation</th>
+                                    <th class="py-3 px-4 text-left">Session</th>
+                                    <th class="py-3 px-4 text-left">Note</th>
+                                    <th class="py-3 px-4 text-left">Recommandé</th>
+                                    <th class="py-3 px-4 text-left">Date</th>
+                                    <th class="py-3 px-4 text-left">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for ff in ffList %}
+                            <tr class="table-row-hover border-t border-zinc-50">
+                                <td class="py-3 px-4 font-semibold text-zinc-700">{{ ff.employee_name ?? '-' }}</td>
+                                <td class="py-3 px-4 font-medium text-zinc-600 max-w-[160px] truncate">{{ ff.formation_name ?? '-' }}</td>
+                                <td class="py-3 px-4 text-[12px] text-zinc-400 max-w-[140px] truncate">{{ ff.session_name ?? '-' }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-0.5 text-amber-500">{% for i in 1..5 %}<svg class="w-3.5 h-3.5 {{ i <= ff.rating ? 'opacity-100' : 'opacity-30' }}" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.12 3.447a1 1 0 00.95.69h3.624c.969 0 1.371 1.24.588 1.81l-2.932 2.13a1 1 0 00-.364 1.118l1.12 3.447c.3.922-.755 1.688-1.54 1.118l-2.932-2.13a1 1 0 00-1.176 0l-2.932 2.13c-.784.57-1.838-.196-1.539-1.118l1.12-3.447a1 1 0 00-.364-1.118L2.78 8.874c-.783-.57-.38-1.81.588-1.81h3.623a1 1 0 00.951-.69l1.12-3.447z"/></svg>{% endfor %}</span>
+                                    <span class="text-[11px] text-zinc-400 ml-1">{{ ff.rating }}/5</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[11px] font-bold {{ ff.recommande ? 'text-emerald-600' : 'text-red-500' }}">
+                                        {{ ff.recommande ? 'Oui' : 'Non' }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-[12px] text-zinc-400">{{ ff.created_at|date('d/m/Y') }}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="loadFfDetails({{ ff.id }})"
+                                            class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200">Voir</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="py-12 text-center text-zinc-400 text-sm">Aucun feedback formation.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>{# /card #}
+        </main>
+    </div>
+</div>
+
+{# Details modal (request / feedback / ff) #}
+<div id="modalDetails" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modalDetails')"></div>
+    <div class="relative flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+            <div class="bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-4 flex items-center justify-between">
+                <h5 id="detailsTitle" class="text-white font-bold text-[15px]">Détails</h5>
+                <button onclick="closeModal('modalDetails')" class="text-white/60 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="detailsBody" class="p-5 space-y-2 text-sm text-zinc-600"></div>
+            <div class="px-5 pb-5 flex justify-end">
+                <button onclick="closeModal('modalDetails')" class="px-4 py-2 rounded-lg text-[12px] font-semibold text-zinc-500 bg-zinc-100 hover:bg-zinc-200">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# New Request Type Modal #}
+<div id="modalNewType" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modalNewType')"></div>
+    <div class="relative flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+            <div class="bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-4 flex items-center justify-between">
+                <h5 class="text-white font-bold text-[15px]">Nouveau type de demande</h5>
+                <button onclick="closeModal('modalNewType')" class="text-white/60 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form action="{{ path('rh_relation_request_type_new') }}" method="POST">
+                <div class="p-5 space-y-3">
+                    <div><label class="block text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 mb-1">Nom *</label>
+                        <input type="text" name="name" required value="{{ typeMode == 'new' ? (typeOld.name ?? '') : '' }}" class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"></div>
+                    {% if typeMode == 'new' and typeErrors.name %}
+                        <p class="text-[11px] text-red-600 mt-1">{{ typeErrors.name }}</p>
+                    {% endif %}
+                    <div><label class="block text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 mb-1">Description</label>
+                        <textarea name="description" rows="2" class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 resize-none">{{ typeMode == 'new' ? (typeOld.description ?? '') : '' }}</textarea></div>
+                    {% if typeMode == 'new' and typeErrors.description %}
+                        <p class="text-[11px] text-red-600 mt-1">{{ typeErrors.description }}</p>
+                    {% endif %}
+                    <label class="flex items-center gap-2 text-sm font-semibold text-zinc-700 cursor-pointer">
+                        <input type="checkbox" name="requires_approval" class="rounded border-zinc-300 text-cyan-600" {{ typeMode == 'new' and typeOld.requires_approval ? 'checked' : '' }}> Requiert une approbation
+                    </label>
+                </div>
+                <div class="px-5 pb-5 flex gap-2 justify-end">
+                    <button type="button" onclick="closeModal('modalNewType')" class="px-4 py-2 rounded-lg text-[12px] font-semibold text-zinc-500 bg-zinc-100 hover:bg-zinc-200">Annuler</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-slate-900 to-slate-700 text-white font-bold text-[12px] hover:from-slate-800 transition-all">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Edit Request Type Modal #}
+<div id="modalEditType" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modalEditType')"></div>
+    <div class="relative flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+            <div class="bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-4 flex items-center justify-between">
+                <h5 class="text-white font-bold text-[15px]">Modifier le type</h5>
+                <button onclick="closeModal('modalEditType')" class="text-white/60 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="editTypeForm" method="POST" action="{{ typeEditId ? path('rh_relation_request_type_edit', {id: typeEditId}) : '' }}">
+                <div class="p-5 space-y-3">
+                    <div><label class="block text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 mb-1">Nom *</label>
+                        <input type="text" name="name" id="editTypeName" required value="{{ typeMode == 'edit' ? (typeOld.name ?? '') : '' }}" class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"></div>
+                    {% if typeMode == 'edit' and typeErrors.name %}
+                        <p class="text-[11px] text-red-600 mt-1">{{ typeErrors.name }}</p>
+                    {% endif %}
+                    <div><label class="block text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 mb-1">Description</label>
+                        <textarea name="description" id="editTypeDesc" rows="2" class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 resize-none">{{ typeMode == 'edit' ? (typeOld.description ?? '') : '' }}</textarea></div>
+                    {% if typeMode == 'edit' and typeErrors.description %}
+                        <p class="text-[11px] text-red-600 mt-1">{{ typeErrors.description }}</p>
+                    {% endif %}
+                    <label class="flex items-center gap-2 text-sm font-semibold text-zinc-700 cursor-pointer">
+                        <input type="checkbox" name="requires_approval" id="editTypeApproval" class="rounded border-zinc-300 text-cyan-600" {{ typeMode == 'edit' and typeOld.requires_approval ? 'checked' : '' }}> Requiert une approbation
+                    </label>
+                </div>
+                <div class="px-5 pb-5 flex gap-2 justify-end">
+                    <button type="button" onclick="closeModal('modalEditType')" class="px-4 py-2 rounded-lg text-[12px] font-semibold text-zinc-500 bg-zinc-100 hover:bg-zinc-200">Annuler</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-slate-900 to-slate-700 text-white font-bold text-[12px] hover:from-slate-800 transition-all">Sauvegarder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+// ── Tab switching ─────────────────────────────────────────────────
+const TABS = ['requests','config','feedbacks','ff'];
+function switchTab(name) {
+    TABS.forEach(t => {
+        document.getElementById('panel-' + t)?.classList.toggle('hidden', t !== name);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (btn) {
+            btn.classList.toggle('border-cyan-500', t === name);
+            btn.classList.toggle('text-cyan-600',   t === name);
+            btn.classList.toggle('border-transparent', t !== name);
+            btn.classList.toggle('text-zinc-400',   t !== name);
+        }
+    });
+    history.replaceState(null, '', '?tab=' + name);
+}
+
+// ── Modals ────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.add('hidden');    document.body.style.overflow = ''; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') TABS.concat(['Approve','Reject','Details','NewType','EditType']).forEach(n => closeModal('modal' + n.charAt(0).toUpperCase() + n.slice(1))); });
+
+// ── Approve / Reject ──────────────────────────────────────────────
+function openApproveModal(id, title) {
+    document.getElementById('approveTitle').textContent = title;
+    document.getElementById('approveForm').action = '/rh/relations/requests/' + id + '/approve';
+    openModal('modalApprove');
+}
+function openRejectModal(id, title) {
+    document.getElementById('rejectTitle').textContent = title;
+    document.getElementById('rejectForm').action = '/rh/relations/requests/' + id + '/reject';
+    openModal('modalReject');
+}
+
+// ── Request details ───────────────────────────────────────────────
+function loadRequestDetails(id) {
+    fetch('/rh/relations/requests/' + id + '/details')
+        .then(r => r.json())
+        .then(req => {
+            document.getElementById('detailsTitle').textContent = 'Demande #' + req.id;
+            const row = (l, v) => `<div class="flex gap-3"><span class="text-zinc-400 font-semibold w-32 shrink-0">${l}</span><span class="text-zinc-700">${v ?? '-'}</span></div>`;
+            document.getElementById('detailsBody').innerHTML =
+                row('Employé', req.employee_name) +
+                row('Type', req.type_name) +
+                row('Priorité', req.priority) +
+                row('Statut', req.status) +
+                row('Soumis le', req.submitted_date?.substring(0,10)) +
+                (req.description ? `<div class="mt-3 pt-3 border-t border-zinc-100"><p class="text-zinc-400 font-semibold text-[11px] uppercase mb-1">Description</p><p class="text-zinc-600">${req.description}</p></div>` : '') +
+                (req.review_comment ? `<div class="mt-2"><p class="text-zinc-400 font-semibold text-[11px] uppercase mb-1">Commentaire RH</p><p class="text-zinc-600">${req.review_comment}</p></div>` : '') +
+                (req.attachment_url ? `<div class="mt-2"><a href="${req.attachment_url}" target="_blank" class="text-cyan-600 hover:underline text-[12px] font-semibold">Voir la piece jointe</a></div>` : '');
+            openModal('modalDetails');
+        });
+}
+
+function loadFeedbackDetails(id) {
+    fetch('/rh/relations/feedbacks/' + id + '/details')
+        .then(r => r.json())
+        .then(fb => {
+            document.getElementById('detailsTitle').textContent = 'Feedback #' + fb.id;
+            const row = (l, v) => `<div class="flex gap-3"><span class="text-zinc-400 font-semibold w-32 shrink-0">${l}</span><span class="text-zinc-700">${v ?? '-'}</span></div>`;
+            document.getElementById('detailsBody').innerHTML =
+                row('De', fb.from_username) +
+                row('À', fb.to_username) +
+                row('Type', fb.feedback_type) +
+                row('Note', fb.rating_stars + ' (' + fb.rating + '/5)') +
+                row('Emotion', (fb.emotion_label ? String(fb.emotion_label).toUpperCase() : 'UNKNOWN') + ' (' + Math.round((Number(fb.emotion_score) || 0) * 100) + '%)') +
+                row('Date', fb.created_at?.substring(0,10)) +
+                (fb.comment ? `<div class="mt-3 pt-3 border-t border-zinc-100"><p class="text-zinc-400 font-semibold text-[11px] uppercase mb-1">Commentaire</p><p class="text-zinc-600">${fb.comment}</p></div>` : '');
+            openModal('modalDetails');
+        });
+}
+
+function loadFfDetails(id) {
+    fetch('/rh/relations/ff/' + id + '/details')
+        .then(r => r.json())
+        .then(ff => {
+            document.getElementById('detailsTitle').textContent = 'Feedback Formation #' + ff.id;
+            const row = (l, v) => `<div class="flex gap-3"><span class="text-zinc-400 font-semibold w-32 shrink-0">${l}</span><span class="text-zinc-700">${v ?? '-'}</span></div>`;
+            document.getElementById('detailsBody').innerHTML =
+                row('Employé', ff.employee_name) +
+                row('Formation', ff.formation_name) +
+                row('Session', ff.session_name) +
+                row('Note', ff.rating_stars + ' (' + ff.rating + '/5)') +
+                row('Recommande', ff.recommande ? 'Oui' : 'Non') +
+                row('Date', ff.created_at?.substring(0,10)) +
+                (ff.contenu_comment ? `<div class="mt-3 pt-3 border-t border-zinc-100"><p class="text-zinc-400 font-semibold text-[11px] uppercase mb-1">Contenu</p><p class="text-zinc-600">${ff.contenu_comment}</p></div>` : '') +
+                (ff.formateur_comment ? `<div class="mt-2"><p class="text-zinc-400 font-semibold text-[11px] uppercase mb-1">Formateur</p><p class="text-zinc-600">${ff.formateur_comment}</p></div>` : '') +
+                (ff.organisation_comment ? `<div class="mt-2"><p class="text-zinc-400 font-semibold text-[11px] uppercase mb-1">Organisation</p><p class="text-zinc-600">${ff.organisation_comment}</p></div>` : '');
+            openModal('modalDetails');
+        });
+}
+
+// ── Edit Request Type ─────────────────────────────────────────────
+function openEditType(rt) {
+    document.getElementById('editTypeName').value = rt.name || '';
+    document.getElementById('editTypeDesc').value = rt.description || '';
+    document.getElementById('editTypeApproval').checked = !!rt.requires_approval;
+    document.getElementById('editTypeForm').action = '/rh/relations/request-types/' + rt.id + '/edit';
+    openModal('modalEditType');
+}
+
+{% if typeMode == 'new' %}
+openModal('modalNewType');
+{% elseif typeMode == 'edit' %}
+openModal('modalEditType');
+{% endif %}
+</script>
+{% endblock %}

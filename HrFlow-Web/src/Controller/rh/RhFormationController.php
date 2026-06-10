@@ -1,0 +1,577 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Controller\rh;
+
+use App\Security\DbUser;
+use App\Service\Formation\FormationService;
+use App\Service\Formation\FormationChangeNotificationService;
+use App\Service\Formation\ParticipationService;
+use App\Service\Formation\PresenceService;
+use App\Service\Formation\SessionFeedbackService;
+use App\Service\Formation\SessionService;
+use App\Service\Formation\ImageAiService;
+use App\Service\Shared\JitsiMeetService;
+use App\Form\Formation\FormationType;
+use App\Form\Formation\SessionFormationType;
+use App\Entity\Formation\Formation;
+use App\Entity\Formation\SessionFormation;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+#[Route('/rh/formation')]
+final class RhFormationController extends AbstractController
+{
+    public function __construct(
+        private readonly FormationService $formationService,
+        private readonly FormationChangeNotificationService $formationChangeNotificationService,
+        private readonly SessionFeedbackService $sessionFeedbackService,
+        private readonly ImageAiService $imageAiService,
+        private readonly JitsiMeetService $jitsiMeetService,
+    ) {
+    }
+
+    #[Route('/', name: 'rh_formation_list', methods: ['GET'])]
+    public function index(Request $request): Response
+    {
+        $userId = $this->getCurrentRhId();
+
+        $search = (string) $request->query->get('search', '');
+        $type = (string) $request->query->get('type', '');
+        $sortQuery = (string) $request->query->get('sort', 'created_at-DESC');
+
+        $sortParts = explode('-', $sortQuery, 2);
+        $sort = $sortParts[0];
+        $dir = $sortParts[1] ?? 'DESC';
+
+        $formations = $this->formationService->getFormationsByRhId($userId, $search, $type, $sort, $dir);
+        $formationIds = array_map(static fn($f) => (int) $f->getId(), $formations);
+        $topInsights = $this->formationService->getTopInsightsByRhId($userId);
+
+        return $this->render('DashboardHr/formation/formation_index.html.twig', [
+            'formations' => $formations,
+            'ratingMap' => $this->sessionFeedbackService->getAverageRatingsByFormationIds($formationIds),
+            'stats' => $this->formationService->getFormationStatsByRhId($userId),
+            'topFormations' => $topInsights['topFormations'],
+            'topFormateurs' => $topInsights['topFormateurs'],
+            'filters' => [
+                'search' => $search,
+                'type' => $type,
+                'sort' => $sortQuery,
+            ],
+        ]);
+    }
+
+    #[Route('/create', name: 'rh_formation_create', methods: ['GET', 'POST'])]
+    public function create(Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $formation = new Formation();
+        $formation->setRhId($this->getCurrentRhId());
+
+        $form = $this->createForm(FormationType::class, $formation);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                $bannerUrl = $this->imageAiService->generateFormationBanner(
+                    (string) $formation->getTitre(),
+                    (string) $formation->getType(),
+                    (string) ($formation->getDescription() ?? '')
+                );
+                $formation->setImageUrl($bannerUrl);
+            } catch (\Throwable) {
+                // Keep creation flow resilient even if external AI image API fails.
+                $formation->setImageUrl(null);
+            }
+
+            $em->persist($formation);
+            $em->flush();
+
+            $this->addFlash('success', 'Formation créée avec succès.');
+            return $this->redirectToRoute('rh_formation_list');
+        }
+
+        return $this->render('DashboardHr/formation/formation_form.html.twig', [
+            'formationForm' => $form,
+            'isEdit' => false,
+        ], new Response(null, $form->isSubmitted() && !$form->isValid() ? 422 : 200));
+    }
+
+    #[Route('/{id}/edit', name: 'rh_formation_edit', methods: ['GET', 'POST'])]
+    public function edit(string $id, Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $idInt = (int) $id;
+        $formation = $this->formationService->getFormationById($idInt);
+        if (!$formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+
+        $form = $this->createForm(FormationType::class, $formation);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->flush();
+            $sentCount = $this->formationChangeNotificationService->notifyFormationUpdated($formation);
+
+            if ($sentCount > 0) {
+                $this->addFlash('success', sprintf('%d notification(s) envoyee(s) aux inscrits.', $sentCount));
+            }
+
+            $this->addFlash('success', 'Formation mise à jour avec succès.');
+            return $this->redirectToRoute('rh_formation_list');
+        }
+
+        return $this->render('DashboardHr/formation/formation_form.html.twig', [
+            'formationForm' => $form,
+            'formation' => $formation,
+            'isEdit' => true,
+        ], new Response(null, $form->isSubmitted() && !$form->isValid() ? 422 : 200));
+    }
+
+    #[Route('/{id}/delete', name: 'rh_formation_delete', methods: ['POST'])]
+    public function delete(string $id, Request $request): Response
+    {
+        $idInt = (int) $id;
+        $formation = $this->formationService->getFormationById($idInt);
+        if (!$formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+
+        if ($this->isCsrfTokenValid('delete-formation-' . $idInt, (string) $request->request->get('_token', ''))) {
+            $sentCount = $this->formationChangeNotificationService->notifyFormationDeleted($formation);
+            $this->formationService->deleteFormationWithRelations($formation);
+
+            if ($sentCount > 0) {
+                $this->addFlash('success', sprintf('%d notification(s) envoyee(s) aux inscrits.', $sentCount));
+            }
+
+            $this->addFlash('success', 'Formation supprimée avec succès.');
+        }
+
+        return $this->redirectToRoute('rh_formation_list');
+    }
+
+    #[Route('/{id}/sessions', name: 'rh_formation_sessions', methods: ['GET'])]
+    public function sessions(string $id): Response
+    {
+        $idInt = (int) $id;
+        $formation = $this->formationService->getFormationById($idInt);
+        if (!$formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+
+        return $this->render('DashboardHr/formation/formation_sessions.html.twig', [
+            'formation' => $formation,
+            'sessions' => $this->formationService->getSessionsByFormation($idInt),
+        ]);
+    }
+
+    #[Route('/{id}/sessions/create', name: 'rh_formation_session_create', methods: ['GET', 'POST'])]
+    public function createSession(string $id, Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $idInt = (int) $id;
+        $formation = $this->formationService->getFormationById($idInt);
+        if (!$formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+
+        $session = new SessionFormation();
+        $session->setFormation($formation);
+
+        $form = $this->createForm(SessionFormationType::class, $session);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted()) {
+            $this->applyOnlineMeetingLinkIfNeeded($session);
+            $this->validateSessionLocationField($session, $form);
+        }
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $dateDebut = $session->getDateDebut();
+            if (!$dateDebut instanceof \DateTimeInterface) {
+                $this->addFlash('error', 'La date de debut de session est obligatoire.');
+                return $this->redirectToRoute('rh_formation_sessions', ['id' => $id]);
+            }
+
+            if (empty($session->getDateFin())) {
+                $debutDate = \DateTime::createFromInterface($dateDebut);
+                $joursToAdd = max(0, (int) $formation->getDuree() - 1);
+                $debutDate->modify("+{$joursToAdd} days");
+                $session->setDateFin($debutDate);
+            }
+
+            $dateFin = $session->getDateFin();
+            if (!$dateFin instanceof \DateTimeInterface) {
+                $this->addFlash('error', 'La date de fin de session est obligatoire.');
+                return $this->redirectToRoute('rh_formation_sessions', ['id' => $id]);
+            }
+
+            $now = new \DateTime();
+            $now->setTime(0, 0, 0);
+            $debut = \DateTime::createFromInterface($dateDebut);
+            $debut->setTime(0, 0, 0);
+            $fin = \DateTime::createFromInterface($dateFin);
+            $fin->setTime(0, 0, 0);
+
+            if ($now < $debut) { $session->setStatut('Planifiee'); }
+            elseif ($now > $fin) { $session->setStatut('Terminee'); }
+            else { $session->setStatut('En cours'); }
+
+            $em->persist($session);
+            $em->flush();
+
+            $this->addFlash('success', 'Session créée avec succès.');
+            return $this->redirectToRoute('rh_formation_sessions', ['id' => $id]);
+        }
+
+        return $this->render('DashboardHr/formation/session_form.html.twig', [
+            'formation' => $formation,
+            'sessionForm' => $form,
+            'isEdit' => false,
+        ], new Response(null, $form->isSubmitted() && !$form->isValid() ? 422 : 200));
+    }
+
+    #[Route('/session/{id}/edit', name: 'rh_formation_session_edit', methods: ['GET', 'POST'])]
+    public function editSession(string $id, Request $request, SessionService $sessionService, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $idInt = (int) $id;
+        $session = $sessionService->getSessionById($idInt);
+        if (!$session) {
+            throw $this->createNotFoundException('Session non trouvée');
+        }
+        $formation = $session->getFormation();
+        if (!$formation instanceof Formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+
+        $form = $this->createForm(SessionFormationType::class, $session);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted()) {
+            $this->applyOnlineMeetingLinkIfNeeded($session);
+            $this->validateSessionLocationField($session, $form);
+        }
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $dateDebut = $session->getDateDebut();
+            if (!$dateDebut instanceof \DateTimeInterface) {
+                $this->addFlash('error', 'La date de debut de session est obligatoire.');
+                return $this->redirectToRoute('rh_formation_sessions', ['id' => $formation->getId()]);
+            }
+
+            if (!$session->getDateFin()) {
+                $debutDate = \DateTime::createFromInterface($dateDebut);
+                $joursToAdd = max(0, (int) $formation->getDuree() - 1);
+                $debutDate->modify("+{$joursToAdd} days");
+                $session->setDateFin($debutDate);
+            }
+
+            $em->flush();
+            $sentCount = $this->formationChangeNotificationService->notifySessionUpdated($session);
+
+            if ($sentCount > 0) {
+                $this->addFlash('success', sprintf('%d notification(s) envoyee(s) aux inscrits.', $sentCount));
+            }
+
+            $this->addFlash('success', 'Session modifiée avec succès.');
+            return $this->redirectToRoute('rh_formation_sessions', ['id' => $formation->getId()]);
+        }
+
+        return $this->render('DashboardHr/formation/session_form.html.twig', [
+            'formation' => $formation,
+            'sessionForm' => $form,
+            'session' => $session,
+            'isEdit' => true,
+        ], new Response(null, $form->isSubmitted() && !$form->isValid() ? 422 : 200));
+    }
+
+    #[Route('/session/{id}/delete', name: 'rh_formation_session_delete', methods: ['POST'])]
+    public function deleteSession(string $id, Request $request, SessionService $sessionService): Response
+    {
+        $idInt = (int) $id;
+        $session = $sessionService->getSessionById($idInt);
+        if (!$session) {
+            throw $this->createNotFoundException('Session non trouvée');
+        }
+
+        $formation = $session->getFormation();
+        if (!$formation instanceof Formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+        $formationId = $formation->getId();
+
+        if (!$this->isCsrfTokenValid('delete-session-' . $idInt, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Token CSRF invalide. Veuillez réessayer.');
+            return $this->redirectToRoute('rh_formation_sessions', ['id' => $formationId]);
+        }
+
+        $sentCount = $this->formationChangeNotificationService->notifySessionDeleted($session);
+        $this->formationService->deleteSessionWithRelations($session);
+
+        if ($sentCount > 0) {
+            $this->addFlash('success', sprintf('%d notification(s) envoyee(s) aux inscrits.', $sentCount));
+        }
+
+        $this->addFlash('success', 'Session supprimée avec succès.');
+
+        return $this->redirectToRoute('rh_formation_sessions', ['id' => $formationId]);
+    }
+
+    #[Route('/session/{id}/participants', name: 'rh_formation_session_participants', methods: ['GET'])]
+    public function participants(string $id, SessionService $sessionService, ParticipationService $participationService): Response
+    {
+        $idInt = (int) $id;
+        $session = $sessionService->getSessionById($idInt);
+        if (!$session) {
+            throw $this->createNotFoundException('Session non trouvée');
+        }
+
+        return $this->render('DashboardHr/formation/formation_participants.html.twig', [
+            'session' => $session,
+            'formation' => $session->getFormation(),
+            'participations' => $participationService->getSessionParticipations($idInt),
+        ]);
+    }
+
+    #[Route('/participants', name: 'rh_formation_all_participants', methods: ['GET'])]
+    public function allParticipants(Request $request, ParticipationService $participationService): Response
+    {
+        $userId = $this->getCurrentRhId();
+        $status = (string) $request->query->get('status', '');
+        $formationIdRaw = $request->query->get('formation', '');
+        $priorityOnly = $request->query->getBoolean('priorityOnly', false);
+        $formationId = is_numeric($formationIdRaw) ? (int) $formationIdRaw : null;
+        if ($formationId !== null && $formationId <= 0) {
+            $formationId = null;
+        }
+
+        return $this->render('DashboardHr/formation/formation_all_participants.html.twig', [
+            'participations' => $participationService->getRhParticipations($userId, $status, $formationId, $priorityOnly),
+            'formations' => $this->formationService->getFormationsByRhId($userId, '', '', 'created_at', 'DESC'),
+            'filters' => [
+                'status' => $status,
+                'formation' => $formationId,
+                'priorityOnly' => $priorityOnly,
+            ]
+        ]);
+    }
+
+    #[Route('/sessions/active', name: 'rh_formation_active_sessions', methods: ['GET'])]
+    public function activeSessions(SessionService $sessionService): Response
+    {
+        $userId = $this->getCurrentRhId();
+
+        return $this->render('DashboardHr/formation/formation_active_sessions.html.twig', [
+            'sessions' => $sessionService->getActiveSessionsByRh($userId),
+        ]);
+    }
+
+    #[Route('/{id}/feedbacks', name: 'rh_formation_feedbacks', methods: ['GET'])]
+    public function feedbacks(string $id): Response
+    {
+        $formationId = (int) $id;
+        $formation = $this->formationService->getFormationById($formationId);
+        if (!$formation) {
+            throw $this->createNotFoundException('Formation non trouvee');
+        }
+
+        return $this->render('DashboardHr/formation/formation_feedbacks.html.twig', [
+            'formation' => $formation,
+            'feedbacks' => $this->sessionFeedbackService->getFeedbacksByFormation($formationId),
+        ]);
+    }
+
+    #[Route('/participation/{id}/approve', name: 'rh_formation_participation_approve', methods: ['POST'])]
+    public function approveParticipation(string $id, Request $request, ParticipationService $participationService): Response
+    {
+        $idInt = (int) $id;
+        if ($this->isCsrfTokenValid('approve-participation-' . $idInt, (string) $request->request->get('_token'))) {
+            $result = $participationService->approveWithPriority($idInt);
+            $this->addFlash($result['ok'] ? 'success' : 'error', $result['message']);
+        }
+        return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('rh_formation_list'));
+    }
+
+    #[Route('/participation/{id}/reject', name: 'rh_formation_participation_reject', methods: ['POST'])]
+    public function rejectParticipation(string $id, Request $request, ParticipationService $participationService): Response
+    {
+        $idInt = (int) $id;
+        if ($this->isCsrfTokenValid('reject-participation-' . $idInt, (string) $request->request->get('_token'))) {
+            $reason = trim((string) $request->request->get('refusal_reason', ''));
+            $participationService->updateStatus($idInt, 'Refuse', $reason !== '' ? $reason : null);
+            $this->addFlash('success', 'Participation refusée.');
+        }
+        return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('rh_formation_list'));
+    }
+
+    #[Route('/session/{id}/presence', name: 'rh_formation_session_presence', methods: ['GET', 'POST'])]
+    public function presence(string $id, Request $request, SessionService $sessionService, ParticipationService $participationService, PresenceService $presenceService): Response
+    {
+        $idInt = (int) $id;
+        $session = $sessionService->getSessionById($idInt);
+        if (!$session) {
+            throw $this->createNotFoundException('Session non trouvée');
+        }
+
+        $formation = $session->getFormation();
+        if (!$formation instanceof Formation) {
+            throw $this->createNotFoundException('Formation non trouvée');
+        }
+
+        $returnToActive = $request->query->get('return') === 'active';
+
+        if ($session->getStatut() !== 'En cours') {
+            $this->addFlash('error', 'Vous ne pouvez faire la présence que pour des sessions En cours.');
+            if ($returnToActive) {
+                return $this->redirectToRoute('rh_formation_active_sessions');
+            }
+            return $this->redirectToRoute('rh_formation_sessions', ['id' => $formation->getId()]);
+        }
+
+        $debut = $session->getDateDebut();
+        $fin = $session->getDateFin();
+        if (!$debut instanceof \DateTimeInterface || !$fin instanceof \DateTimeInterface) {
+            $this->addFlash('error', 'Dates de session invalides.');
+            if ($returnToActive) {
+                return $this->redirectToRoute('rh_formation_active_sessions');
+            }
+            return $this->redirectToRoute('rh_formation_sessions', ['id' => $formation->getId()]);
+        }
+
+        $today = new \DateTime();
+
+        $maxDate = $today < $fin ? clone $today : clone $fin;
+
+        $selectedDateStr = (string) $request->query->get('date', $maxDate->format('Y-m-d'));
+        $selectedDate = new \DateTime($selectedDateStr);
+
+        if ($selectedDate < $debut || $selectedDate > $maxDate) {
+            $selectedDate = clone $maxDate;
+            $selectedDateStr = $maxDate->format('Y-m-d');
+        }
+
+        $allParticipations = $participationService->getSessionParticipations($idInt);
+        $acceptedParticipations = array_filter(
+            $allParticipations,
+            fn($p) => $p->getStatutParticipation() === 'Accepte'
+        );
+
+        $dates = [];
+        $interval = new \DateInterval('P1D');
+        $endDateForPeriod = \DateTimeImmutable::createFromInterface($maxDate)->modify('+1 day');
+        $period = new \DatePeriod($debut, $interval, $endDateForPeriod);
+        foreach ($period as $dt) {
+            $dates[] = $dt->format('Y-m-d');
+        }
+
+        if ($request->isMethod('POST')) {
+            $presencesDataAll = $request->request->all('presences');
+            if ($presencesDataAll !== []) {
+                try {
+                    foreach ($presencesDataAll as $date => $presencesData) {
+                        $presenceService->savePresences($date, $presencesData);
+                    }
+                } catch (\Throwable) {
+                    $this->addFlash('error', 'Erreur lors de l\'enregistrement des présences.');
+                }
+
+                $this->addFlash('success', 'Présences mises  à jour avec succès.');
+                if ($returnToActive) {
+                    return $this->redirectToRoute('rh_formation_active_sessions');
+                }
+                return $this->redirectToRoute('rh_formation_sessions', ['id' => $formation->getId()]);
+            }
+        }
+
+        $existingPresences = $presenceService->getPresencesBySession($idInt);
+        $currentPresences = [];
+        foreach ($existingPresences as $p) {
+            $datePresence = $p->getDatePresence();
+            $participation = $p->getParticipation();
+            if (!$datePresence instanceof \DateTimeInterface || $participation === null || $participation->getId() === null) {
+                continue;
+            }
+            $currentPresences[$datePresence->format('Y-m-d')][$participation->getId()] = $p->getStatut();
+        }
+
+        return $this->render('DashboardHr/formation/formation_presence.html.twig', [
+            'session' => $session,
+            'formation' => $formation,
+            'participations' => array_values($acceptedParticipations),
+            'dates' => $dates,
+            'currentPresences' => $currentPresences,
+        ]);
+    }
+
+    /**
+     * @param FormInterface<mixed> $form
+     */
+    private function validateSessionLocationField(SessionFormation $session, FormInterface $form): void
+    {
+        $mode = $this->normalizeSessionMode((string) $session->getMode());
+        $lieu = trim((string) $session->getLieu());
+
+        if ($mode !== 'en ligne' && $lieu === '') {
+            $form->get('lieu')->addError(new FormError('Le lieu de la session est obligatoire pour ce mode.'));
+            return;
+        }
+
+        if ($mode === 'en ligne' && $lieu === '') {
+            $this->applyOnlineMeetingLinkIfNeeded($session);
+            $lieu = trim((string) $session->getLieu());
+        }
+
+        if ($mode === 'en ligne' && $lieu !== '' && !$this->isValidHttpUrl($lieu)) {
+            $form->get('lieu')->addError(new FormError('Pour une session en ligne, veuillez renseigner un lien valide (Teams, Google Meet, Zoom...).'));
+        }
+    }
+
+    private function applyOnlineMeetingLinkIfNeeded(SessionFormation $session): void
+    {
+        $mode = $this->normalizeSessionMode((string) $session->getMode());
+        $lieu = trim((string) $session->getLieu());
+
+        if ($mode !== 'en ligne' || $lieu !== '') {
+            return;
+        }
+
+        $formationId = (int) ($session->getFormation()?->getId() ?? 0);
+        $formationId = max(1, $formationId);
+
+        $session->setLieu($this->jitsiMeetService->generateFormationSessionLink($formationId, $session->getId()));
+    }
+
+    private function normalizeSessionMode(string $mode): string
+    {
+        $normalized = strtolower(trim($mode));
+
+        return str_replace(['é', 'è', 'ê'], 'e', $normalized);
+    }
+
+    private function isValidHttpUrl(string $value): bool
+    {
+        if ($value === '' || filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+
+
+        return in_array($scheme, ['http', 'https'], true);
+    }
+
+    private function getCurrentRhId(): int
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof DbUser) {
+            throw $this->createAccessDeniedException('Utilisateur RH invalide.');
+        }
+
+        return $user->getId();
+    }
+}

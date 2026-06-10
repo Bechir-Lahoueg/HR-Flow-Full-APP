@@ -1,0 +1,674 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Demandes de conge | HrFlow{% endblock %}
+
+{% block body %}
+{# Serialize leave data for calendar #}
+{% set calendarLeaves = [] %}
+{% for leave in upcomingLeaves|default([]) %}
+    {% set calendarLeaves = calendarLeaves|merge([{ name: leave.employeeName, start: leave.startDate|date('Y-m-d'), end: leave.endDate|date('Y-m-d'), type: leave.leaveType }]) %}
+{% endfor %}
+
+<div class="min-h-screen bg-[#f4f7fb] dark:bg-zinc-950 dot-grid">
+    {% include 'DashboardHr/components/_sidebar.html.twig' %}
+
+    <div class="lg:ml-[272px] transition-all duration-300">
+        {% include 'DashboardHr/components/_header.html.twig' %}
+
+        {% for message in app.flashes('success') %}
+            <div class="mx-6 lg:mx-8 mt-4 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-sm font-medium flex items-center gap-2.5 animate-slide-up">
+                <div class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                </div>
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="mx-6 lg:mx-8 mt-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-sm font-medium flex items-center gap-2.5 animate-slide-up">
+                <div class="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        <main class="p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto"
+              data-controller="tab-switcher leave-filters"
+              data-tab-switcher-active-value="0">
+
+            {# ═══════════ HERO BANNER ═══════════ #}
+            <section class="relative overflow-hidden rounded-2xl text-white p-8 md:p-10 animate-slide-up" style="background: linear-gradient(to bottom right, #022E69, #0a3d8f, #051f3d);">
+                <div class="absolute -left-16 bottom-0 h-56 w-56 rounded-full blur-3xl mesh-blob" style="background: radial-gradient(circle, rgba(63, 169, 245, 0.15), transparent 70%);"></div>
+                <div class="absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl mesh-blob-alt" style="background: radial-gradient(circle, rgba(20, 94, 183, 0.15), transparent 70%);"></div>
+                <div class="absolute top-1/2 left-1/3 h-32 w-32 rounded-full blur-3xl" style="background: radial-gradient(circle, rgba(63, 169, 245, 0.10), transparent 70%);"></div>
+
+                <div class="relative z-10 grid lg:grid-cols-[1fr_1fr] gap-8 items-center">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: #3FA9F5;"></div>
+                            <span class="text-[11px] font-bold uppercase tracking-[0.15em]" style="color: #3FA9F5;">Gestion des Conges</span>
+                        </div>
+                        <h2 class="text-3xl md:text-5xl font-display leading-[1.1] tracking-tight">Demandes de conge</h2>
+                        <p class="mt-3 text-[14px] text-slate-300/90 max-w-lg leading-relaxed">Pilotez les conges de votre equipe — credits, planning, decisions et calendrier en un seul endroit.</p>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4 transition-colors group" style="background: rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            <p class="text-[9px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63,169,245,0.7);">Total</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num group-hover:scale-105 transition-transform origin-left">{{ rhLeaveStats.total_count }}</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4 transition-colors group" style="background: rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[9px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63,169,245,0.7);">Attente</p>
+                                {% if rhLeaveStats.pending_count > 0 %}<span class="w-2 h-2 rounded-full animate-pulse" style="background-color: #3FA9F5;"></span>{% endif %}
+                            </div>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num group-hover:scale-105 transition-transform origin-left" style="color: #3FA9F5;">{{ rhLeaveStats.pending_count }}</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4 transition-colors group" style="background: rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            <p class="text-[9px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63,169,245,0.7);">Validees</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num text-emerald-400 group-hover:scale-105 transition-transform origin-left">{{ rhLeaveStats.approved_count }}</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4 transition-colors group" style="background: rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            <p class="text-[9px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63,169,245,0.7);">Refusees</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num text-rose-400 group-hover:scale-105 transition-transform origin-left">{{ rhLeaveStats.rejected_count }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {# ═══════════ TAB NAVIGATION (5 tabs) ═══════════ #}
+            <div class="animate-slide-up stagger-1 overflow-x-auto pb-1">
+                <div class="tab-bar">
+                    <div data-tab-switcher-target="indicator" class="tab-indicator"></div>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="0" class="tab-btn tab-active" role="tab" aria-selected="true">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z"/></svg>
+                        Apercu
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="1" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>
+                        Credit
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="2" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                        Planning
+                        {% if upcomingLeaves|default([])|length > 0 %}
+                            <span class="tab-count">{{ upcomingLeaves|length }}</span>
+                        {% endif %}
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="3" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+                        Decisions
+                        {% if rhLeaveStats.pending_count > 0 %}
+                            <span class="tab-count">{{ rhLeaveStats.pending_count }}</span>
+                        {% endif %}
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="4" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-3.75h.008v.008H12v-.008z"/></svg>
+                        Calendrier
+                    </button>
+                </div>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 0: APERCU ════════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="space-y-6">
+                {# Stat Cards #}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="card-surface p-5 group" style="border-left: 3px solid #145EB7;">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform" style="background-color: rgba(20,94,183,0.1);">
+                                <svg class="w-5 h-5" style="color: #145EB7;" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/></svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 font-mono-num leading-none">{{ rhLeaveStats.total_count }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Toutes les demandes</p>
+                        <div class="mt-3 h-1 rounded-full bg-zinc-100 overflow-hidden"><div class="h-full w-full rounded-full" style="background: linear-gradient(90deg, #145EB7, #3FA9F5);"></div></div>
+                    </div>
+                    <div class="card-surface p-5 group" style="border-left: 3px solid #3FA9F5;">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform" style="background-color: rgba(63,169,245,0.1);">
+                                <svg class="w-5 h-5" style="color: #3FA9F5;" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            {% if rhLeaveStats.pending_count > 0 %}<span class="w-2.5 h-2.5 rounded-full animate-pulse" style="background-color: #3FA9F5;"></span>{% endif %}
+                        </div>
+                        <p class="text-3xl font-extrabold font-mono-num leading-none" style="color: #145EB7;">{{ rhLeaveStats.pending_count }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Actions prioritaires</p>
+                        <div class="mt-3 h-1 rounded-full bg-zinc-100 overflow-hidden"><div class="h-full w-1/3 rounded-full" style="background: linear-gradient(90deg, #145EB7, #3FA9F5);"></div></div>
+                    </div>
+                    <div class="card-surface p-5 group" style="border-left: 3px solid #10b981;">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono-num leading-none">{{ rhLeaveStats.approved_count }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Demandes validees</p>
+                        <div class="mt-3 h-1 rounded-full bg-zinc-100 overflow-hidden"><div class="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"></div></div>
+                    </div>
+                    <div class="card-surface p-5 group" style="border-left: 3px solid #f43f5e;">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5 text-rose-500 dark:text-rose-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-rose-500 dark:text-rose-400 font-mono-num leading-none">{{ rhLeaveStats.rejected_count }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Demandes refusees</p>
+                        <div class="mt-3 h-1 rounded-full bg-zinc-100 overflow-hidden"><div class="h-full w-1/4 rounded-full bg-gradient-to-r from-rose-500 to-pink-400"></div></div>
+                    </div>
+                </div>
+
+                {# Team Credit Summary #}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="card-surface p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background-color: rgba(20,94,183,0.1);">
+                                <svg class="w-5 h-5" style="color: #145EB7;" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Solde disponible</p>
+                                <p class="text-[10px] text-zinc-300 dark:text-zinc-600">Total equipe</p>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold font-mono-num leading-none" style="color: #145EB7;">{{ rhCreditStats.available_sum|default(0)|number_format(1, '.', ',') }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2">{{ rhCreditStats.employees_count|default(0) }} employes</p>
+                    </div>
+                    <div class="card-surface p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Jours consommes</p>
+                                <p class="text-[10px] text-zinc-300 dark:text-zinc-600">Utilisation</p>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-orange-600 dark:text-orange-400 font-mono-num leading-none">{{ rhCreditStats.used_sum|default(0)|number_format(1, '.', ',') }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2">jours utilises</p>
+                    </div>
+                    <div class="card-surface p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background-color: rgba(2,46,105,0.08);">
+                                <svg class="w-5 h-5" style="color: #022E69;" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Total accumule</p>
+                                <p class="text-[10px] text-zinc-300 dark:text-zinc-600">Base</p>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold font-mono-num leading-none" style="color: #022E69;">{{ rhCreditStats.accrued_sum|default(0)|number_format(1, '.', ',') }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2">base totale</p>
+                    </div>
+                </div>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 1: CREDIT CONGE ══════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="hidden space-y-6">
+                <section class="card-surface overflow-hidden bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                    <div class="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800/50 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, #145EB7, #3FA9F5); box-shadow: 0 4px 14px -4px rgba(20,94,183,0.4);">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-zinc-800 dark:text-zinc-200">Ajouter du credit conge</h3>
+                                <p class="text-[11px] text-zinc-400">Attribuez des jours supplementaires a un employe</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1 rounded-lg border" style="color: #145EB7; background-color: rgba(20,94,183,0.08); border-color: rgba(20,94,183,0.2);">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background-color: #145EB7;"></span>Credit Manuel
+                        </span>
+                    </div>
+                    <div class="p-6">
+                        <form method="post" action="{{ path('app_rh_leave_credit_grant') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end" novalidate>
+                            <input type="hidden" name="_token" value="{{ csrf_token('rh_leave_credit_grant') }}">
+                            <div class="md:col-span-2">
+                                <label for="employee-id" class="block text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                                    Employe
+                                </label>
+                                <select id="employee-id" name="employee_id" class="input-refined w-full rounded-xl bg-zinc-50 dark:bg-zinc-800 text-sm px-3.5 py-2.5 text-zinc-700 dark:text-zinc-300 appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:1em] pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;)">
+                                    <option value="">-- Selectionner un employe --</option>
+                                    {% for employee in employees %}
+                                        <option value="{{ employee.id }}">{{ employee.fullName }} ({{ employee.email }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="credit-days" class="block text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Jours a ajouter
+                                </label>
+                                <input id="credit-days" type="number" name="credit_days" step="0.5" placeholder="Ex: 5" class="input-refined w-full rounded-xl bg-zinc-50 dark:bg-zinc-800 text-sm px-3.5 py-2.5 text-zinc-700 dark:text-zinc-300 font-mono-num">
+                            </div>
+                            <button type="submit" class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold shadow-lg active:scale-[0.98] transition-all" style="background: linear-gradient(135deg, #145EB7, #3FA9F5); box-shadow: 0 4px 14px -4px rgba(20,94,183,0.4);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                Crediter le solde
+                            </button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 2: PLANNING ══════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="hidden space-y-6">
+                <section class="card-surface overflow-hidden bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                    <div class="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, #145EB7, #3FA9F5); box-shadow: 0 4px 14px -4px rgba(20,94,183,0.4);">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-zinc-800 dark:text-zinc-200">Planning des conges a venir</h3>
+                                <p class="text-[11px] text-zinc-400">Conges approuves pour votre equipe</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider font-mono-num px-2.5 py-1 rounded-lg border" style="color: #145EB7; background-color: rgba(20,94,183,0.08); border-color: rgba(20,94,183,0.2);">{{ upcomingLeaves|default([])|length }} prevu{{ upcomingLeaves|default([])|length > 1 ? 's' : '' }}</span>
+                    </div>
+                    {% if upcomingLeaves|default([])|length > 0 %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-zinc-100 dark:border-zinc-800/50">
+                                    <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-5 bg-zinc-50/60 dark:bg-zinc-800/30">Employe</th>
+                                    <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Periode</th>
+                                    <th class="text-center text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Jours</th>
+                                    <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Type</th>
+                                    <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-50 dark:divide-zinc-800/30">
+                            {% for leave in upcomingLeaves %}
+                                {% set isCurrentlyOnLeave = (leave.startDate|date('Y-m-d') <= 'now'|date('Y-m-d')) and (leave.endDate|date('Y-m-d') >= 'now'|date('Y-m-d')) %}
+                                <tr class="row-refined">
+                                    <td class="py-3.5 px-5">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style="background: {{ isCurrentlyOnLeave ? 'linear-gradient(135deg, #022E69, #145EB7)' : 'linear-gradient(135deg, #145EB7, #3FA9F5)' }};">
+                                                <span class="text-[11px] font-bold text-white">{{ leave.employeeName|first|upper }}</span>
+                                            </div>
+                                            <span class="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">{{ leave.employeeName }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3.5 px-4"><p class="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">{{ leave.startDate|date('d M') }} — {{ leave.endDate|date('d M Y') }}</p></td>
+                                    <td class="py-3.5 px-4 text-center"><span class="text-[14px] font-bold text-zinc-800 dark:text-zinc-200 font-mono-num">{{ leave.daysCount }}</span></td>
+                                    <td class="py-3.5 px-4"><span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">{{ leave.leaveType }}</span></td>
+                                    <td class="py-3.5 px-4">
+                                        {% if isCurrentlyOnLeave %}
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border" style="background-color: rgba(2,46,105,0.08); color: #022E69; border-color: rgba(2,46,105,0.2);"><span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: #145EB7;"></span>En conge</span>
+                                        {% else %}
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border" style="background-color: rgba(63,169,245,0.08); color: #145EB7; border-color: rgba(63,169,245,0.25);"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>{{ leave.startDate|date('d/m') }}</svg></span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="py-16 text-center"><p class="text-sm text-zinc-400">Aucun conge a venir pour le moment</p></div>
+                    {% endif %}
+                </section>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 3: DECISIONS ═════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="hidden space-y-6">
+                <section class="card-surface overflow-hidden bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                    <div class="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800/50">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, #145EB7, #3FA9F5); box-shadow: 0 4px 14px -4px rgba(20,94,183,0.4);">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-zinc-800 dark:text-zinc-200">Table de decision RH</h3>
+                                    <p class="text-[11px] text-zinc-400">Gerez les demandes de conge</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                {% set currentQuery = app.request.query.all %}
+                                <a href="{{ path('app_rh_leave_requests', currentQuery|merge({status: 'ALL'})) }}" class="px-3.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all duration-200 {{ statusFilter is null ? 'text-white border-transparent shadow-md' : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}" {% if statusFilter is null %}style="background-color: #022E69;"{% endif %}>Tous</a>
+                                <a href="{{ path('app_rh_leave_requests', currentQuery|merge({status: 'ATTENTE'})) }}" class="px-3.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all duration-200 flex items-center gap-1.5 {{ statusFilter == 'ATTENTE' ? 'text-white border-transparent shadow-md' : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}" {% if statusFilter == 'ATTENTE' %}style="background-color: #145EB7;"{% endif %}><span class="w-1.5 h-1.5 rounded-full {{ statusFilter == 'ATTENTE' ? 'bg-white' : '' }}" {% if statusFilter != 'ATTENTE' %}style="background-color: #3FA9F5;"{% endif %}></span>En attente</a>
+                                <a href="{{ path('app_rh_leave_requests', currentQuery|merge({status: 'ACCEPTE'})) }}" class="px-3.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all duration-200 flex items-center gap-1.5 {{ statusFilter == 'ACCEPTE' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/25' : 'border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100' }}"><span class="w-1.5 h-1.5 rounded-full {{ statusFilter == 'ACCEPTE' ? 'bg-white' : 'bg-emerald-500' }}"></span>Validees</a>
+                                <a href="{{ path('app_rh_leave_requests', currentQuery|merge({status: 'REFUSE'})) }}" class="px-3.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all duration-200 flex items-center gap-1.5 {{ statusFilter == 'REFUSE' ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-500/25' : 'border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100' }}"><span class="w-1.5 h-1.5 rounded-full {{ statusFilter == 'REFUSE' ? 'bg-white' : 'bg-rose-500' }}"></span>Refusees</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50" style="background-color: rgba(20,94,183,0.03);">
+                        <form data-leave-filters-target="form" method="get" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+                            <div class="xl:col-span-2">
+                                <label for="rh-search" class="block text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0 0A7.5 7.5 0 103.75 9.75a7.5 7.5 0 0012.9 6.9z"/></svg>Recherche</label>
+                                <div class="relative"><svg class="w-4 h-4 text-zinc-300 dark:text-zinc-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0 0A7.5 7.5 0 103.75 9.75a7.5 7.5 0 0012.9 6.9z"/></svg><input data-leave-filters-target="search" data-action="input->leave-filters#search" id="rh-search" type="text" name="q" value="{{ searchFilter|default('') }}" placeholder="Nom, type, motif..." class="input-refined w-full pl-10 rounded-xl bg-white dark:bg-zinc-800 text-sm py-2.5 placeholder:text-zinc-300 dark:placeholder:text-zinc-600" autocomplete="off"></div>
+                            </div>
+                            <div>
+                                <label for="rh-status" class="block text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/></svg>Statut</label>
+                                <select id="rh-status" name="status" data-action="change->leave-filters#filter" class="input-refined w-full rounded-xl bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:1em] pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;)">
+                                    <option value="ALL" {{ statusFilter is null ? 'selected' : '' }}>Tous</option>
+                                    <option value="ATTENTE" {{ statusFilter == 'ATTENTE' ? 'selected' : '' }}>ATTENTE</option>
+                                    <option value="ACCEPTE" {{ statusFilter == 'ACCEPTE' ? 'selected' : '' }}>ACCEPTE</option>
+                                    <option value="REFUSE" {{ statusFilter == 'REFUSE' ? 'selected' : '' }}>REFUSE</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="rh-sort" class="block text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/></svg>Trier par</label>
+                                <select id="rh-sort" name="sort" data-action="change->leave-filters#filter" class="input-refined w-full rounded-xl bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:1em] pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;)">
+                                    <option value="request_date" {{ sortFilter|default('request_date') == 'request_date' ? 'selected' : '' }}>Date de demande</option>
+                                    <option value="start_date" {{ sortFilter|default('request_date') == 'start_date' ? 'selected' : '' }}>Date de debut</option>
+                                    <option value="days" {{ sortFilter|default('request_date') == 'days' ? 'selected' : '' }}>Nombre de jours</option>
+                                    <option value="employee" {{ sortFilter|default('request_date') == 'employee' ? 'selected' : '' }}>Employe</option>
+                                    <option value="status" {{ sortFilter|default('request_date') == 'status' ? 'selected' : '' }}>Statut</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="rh-dir" class="block text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c1.472 0 2.882.265 4.185.75M12 20.25c-1.472 0-2.882.265-4.185.75"/></svg>Ordre</label>
+                                <select id="rh-dir" name="dir" data-action="change->leave-filters#filter" class="input-refined w-full rounded-xl bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:1em] pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;)">
+                                    <option value="DESC" {{ dirFilter|default('DESC') == 'DESC' ? 'selected' : '' }}>Decroissant</option>
+                                    <option value="ASC" {{ dirFilter|default('DESC') == 'ASC' ? 'selected' : '' }}>Croissant</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end gap-2">
+                                <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm active:scale-[0.98] transition-all" style="background: linear-gradient(135deg, #145EB7, #3FA9F5);">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/></svg>Filtrer
+                                </button>
+                                <a href="{{ path('app_rh_leave_requests') }}" class="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="overflow-x-auto max-h-[70vh]">
+                        <table class="min-w-full text-sm">
+                            <thead class="sticky top-0 z-10"><tr class="border-b border-zinc-100 dark:border-zinc-800/50">
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-5 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Employe</th>
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Periode</th>
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Type</th>
+                                <th class="text-center text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Jours</th>
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Credit</th>
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Statut</th>
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Motif</th>
+                                <th class="text-left text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/95 dark:bg-zinc-800/95 backdrop-blur-sm">Decision</th>
+                            </tr></thead>
+                            <tbody class="divide-y divide-zinc-50 dark:divide-zinc-800/30">
+                            {% for leave in leaveRequests %}
+                            <tr class="row-refined align-top">
+                                <td class="py-4 px-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style="background: linear-gradient(135deg, #145EB7, #3FA9F5);">
+                                            <span class="text-[11px] font-bold text-white">{{ leave.employeeName|first|upper }}</span>
+                                        </div>
+                                        <span class="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">{{ leave.employeeName }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-4"><p class="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">{{ leave.startDate|date('d M') }}</p><p class="text-[11px] text-zinc-400">au {{ leave.endDate|date('d M Y') }}</p></td>
+                                <td class="py-4 px-4">
+                                    <div class="flex flex-col gap-1.5">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 w-fit">{{ leave.leaveType }}</span>
+                                        {% if leave.requestCategory == 'EXCEPTION' %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold w-fit border" style="color: #022E69; background-color: rgba(2,46,105,0.08); border-color: rgba(2,46,105,0.2);">
+                                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                                                EXCEPTION
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="py-4 px-4 text-center"><span class="text-[15px] font-extrabold text-zinc-800 dark:text-zinc-200 font-mono-num">{{ leave.daysCount }}</span></td>
+                                <td class="py-4 px-4">
+                                    {% set available = balanceMap[leave.employee.id]|default(0) %}
+                                    {% set afterBalance = available - leave.daysCount %}
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="w-2 h-2 rounded-full {{ afterBalance < 0 ? 'bg-rose-500' : 'bg-emerald-500' }}"></span>
+                                            <span class="text-[12px] font-bold {{ afterBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400' }} font-mono-num">{{ available|number_format(1, '.', ',') }}j</span>
+                                        </div>
+                                        <p class="text-[10px] text-zinc-400 pl-3.5 font-mono-num">Apres: {{ afterBalance|number_format(1, '.', ',') }}j</p>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-4">
+                                    {% if leave.status == 'ATTENTE' %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border" style="background-color: rgba(63,169,245,0.1); color: #145EB7; border-color: rgba(63,169,245,0.3);"><span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: #3FA9F5;"></span>ATTENTE</span>
+                                    {% elseif leave.status == 'ACCEPTE' %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>ACCEPTE</span>
+                                    {% elseif leave.status == 'REFUSE' %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>REFUSE</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-4 px-4 max-w-[200px]">
+                                    <div class="space-y-1">
+                                        <p class="text-[12px] text-zinc-500 dark:text-zinc-400 truncate" title="{{ leave.reason }}">{{ leave.reason ?: '-' }}</p>
+                                        {% if leave.requestCategory == 'EXCEPTION' %}
+                                            <p class="text-[10px] font-bold" style="color: #145EB7;">Urgence: {{ leave.urgencyLevel ?: '-' }}</p>
+                                            {% if leave.attachmentPath %}
+                                                <a href="{{ leave.attachmentPath }}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold hover:opacity-80 transition-opacity" style="color: #3FA9F5;">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/></svg>
+                                                    Justificatif
+                                                </a>
+                                            {% endif %}
+                                            {% if leave.attachmentOcrSummary %}
+                                                <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate" title="{{ leave.attachmentOcrSummary }}">Resume OCR: {{ leave.attachmentOcrSummary }}</p>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="py-4 px-4">
+                                    {% if leave.status == 'ATTENTE' %}
+                                        {% if leave.requestCategory == 'EXCEPTION' and leave.workflowStatus == 'ADMIN_PENDING' %}
+                                            <div class="text-[11px] action-card p-3 rounded-lg border" style="background-color: rgba(2,46,105,0.06); border-color: rgba(2,46,105,0.15);">
+                                                <div class="flex items-center gap-1.5 mb-1">
+                                                    <svg class="w-3 h-3" style="color: #145EB7;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                    <span class="font-bold" style="color: #145EB7;">En attente Admin</span>
+                                                </div>
+                                                <p class="text-zinc-400">Pre-approuvee RH</p>
+                                            </div>
+                                        {% else %}
+                                            <div class="inline-dec"
+                                                 data-approve-url="{{ path('app_rh_leave_approve', {id: leave.id}) }}"
+                                                 data-approve-token="{{ csrf_token('rh_leave_approve_' ~ leave.id) }}"
+                                                 data-approve-label="{{ leave.requestCategory == 'EXCEPTION' ? 'Pre-approuver' : 'Approuver' }}"
+                                                 data-reject-url="{{ path('app_rh_leave_reject', {id: leave.id}) }}"
+                                                 data-reject-token="{{ csrf_token('rh_leave_reject_' ~ leave.id) }}"
+                                                 data-ai-url="{{ path('app_rh_leave_ai_comment') }}"
+                                                 data-ai-token="{{ csrf_token('rh_leave_ai_comment') }}"
+                                                 data-ai-leave-id="{{ leave.id }}">
+                                                {# Etape 0 : bouton Décider #}
+                                                <div class="dec-s0">
+                                                    <button type="button" onclick="decS1(this.closest('.inline-dec'))" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all shadow-sm" style="border-color: rgba(20,94,183,0.3); color: #145EB7; background: white;">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>
+                                                        Décider
+                                                    </button>
+                                                </div>
+                                                {# Etape 1 : choisir Accepter ou Refuser #}
+                                                <div class="dec-s1 hidden">
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <button type="button" onclick="decS2(this.closest('.inline-dec'),'approve')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all active:scale-[0.97]">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                                            Accepter
+                                                        </button>
+                                                        <button type="button" onclick="decS2(this.closest('.inline-dec'),'reject')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all active:scale-[0.97]">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            Refuser
+                                                        </button>
+                                                        <button type="button" onclick="decReset(this.closest('.inline-dec'))" class="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline transition-colors">annuler</button>
+                                                    </div>
+                                                </div>
+                                                {# Etape 2a : formulaire approbation #}
+                                                <form class="dec-s2a hidden space-y-1.5" method="post" action="">
+                                                    <input type="hidden" name="_token">
+                                                    <input type="text" name="rh_comment" placeholder="Commentaire (optionnel)" class="w-full rounded-lg text-[11px] bg-white dark:bg-zinc-800 py-1.5 px-2.5 focus:outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600 text-zinc-700 dark:text-zinc-300 min-w-[160px] border" style="border-color: rgba(20,94,183,0.25);">
+                                                    <button type="button" onclick="decAi(this.closest('.inline-dec'),'approve')" class="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors" style="border-color: rgba(63,169,245,0.4); color: #145EB7; background-color: rgba(63,169,245,0.08);">
+                                                        Rediger avec IA
+                                                    </button>
+                                                    <p class="dec-ai-notice hidden text-[10px] text-zinc-400">Texte suggere par IA, a verifier avant envoi.</p>
+                                                    <div class="flex gap-1.5">
+                                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all active:scale-[0.97] flex-1 justify-center">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                                            <span class="dec-approve-label">Approuver</span>
+                                                        </button>
+                                                        <button type="button" onclick="decReset(this.closest('.inline-dec'))" class="px-2 py-1.5 rounded-lg text-[10px] text-zinc-400 hover:text-zinc-600 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">↩</button>
+                                                    </div>
+                                                </form>
+                                                {# Etape 2r : formulaire refus #}
+                                                <form class="dec-s2r hidden space-y-1.5" method="post" action="" novalidate>
+                                                    <input type="hidden" name="_token">
+                                                    <input type="text" name="rh_comment" placeholder="Motif du refus (obligatoire)" class="w-full rounded-lg text-[11px] bg-white dark:bg-zinc-800 py-1.5 px-2.5 focus:outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600 text-zinc-700 dark:text-zinc-300 min-w-[160px] border border-rose-200 dark:border-rose-800/50">
+                                                    <button type="button" onclick="decAi(this.closest('.inline-dec'),'reject')" class="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors" style="border-color: rgba(63,169,245,0.4); color: #145EB7; background-color: rgba(63,169,245,0.08);">
+                                                        Rediger avec IA
+                                                    </button>
+                                                    <p class="dec-ai-notice hidden text-[10px] text-zinc-400">Texte suggere par IA, a verifier avant envoi.</p>
+                                                    <div class="flex gap-1.5">
+                                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all active:scale-[0.97] flex-1 justify-center">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            Refuser
+                                                        </button>
+                                                        <button type="button" onclick="decReset(this.closest('.inline-dec'))" class="px-2 py-1.5 rounded-lg text-[10px] text-zinc-400 hover:text-zinc-600 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">↩</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="text-[11px] text-zinc-400 dark:text-zinc-500 card-surface p-3 space-y-2 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                                            <div>
+                                                <p class="font-bold text-zinc-500 dark:text-zinc-400 mb-0.5 flex items-center gap-1">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                                                    RH:
+                                                </p>
+                                                <p>{{ leave.rhComment ?: '-' }}</p>
+                                            </div>
+                                            {% if leave.adminComment %}
+                                                <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                                                    <p class="font-bold text-zinc-500 dark:text-zinc-400 mb-0.5 flex items-center gap-1">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                                                        Admin:
+                                                    </p>
+                                                    <p>{{ leave.adminComment }}</p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="py-20 text-center">
+                                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background-color: rgba(20,94,183,0.08);">
+                                        <svg class="w-7 h-7" style="color: rgba(20,94,183,0.3);" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+                                    </div>
+                                    <p class="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Aucune demande trouvee</p>
+                                    <p class="text-xs text-zinc-300 dark:text-zinc-600 mt-1">Modifiez vos filtres</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 4: CALENDRIER ════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="hidden">
+                <section class="card-surface overflow-hidden bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 shadow-sm"
+                         data-controller="calendar"
+                         data-calendar-leaves-value="{{ calendarLeaves|json_encode|e('html_attr') }}"
+                         data-calendar-country-value="TN">
+
+                    <div class="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800/50">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, #022E69, #145EB7); box-shadow: 0 4px 14px -4px rgba(2,46,105,0.4);">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-3.75h.008v.008H12v-.008z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-zinc-800 dark:text-zinc-200">Calendrier equipe</h3>
+                                    <p class="text-[11px] text-zinc-400">Jours feries + conges de votre equipe</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button data-action="click->calendar#prev" class="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                                </button>
+                                <span data-calendar-target="monthLabel" class="text-sm font-bold text-zinc-800 dark:text-zinc-200 min-w-[140px] text-center font-mono-num"></span>
+                                <button data-action="click->calendar#next" class="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                </button>
+                                <button data-action="click->calendar#today" class="px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors" style="color: #145EB7; background-color: rgba(20,94,183,0.08); border-color: rgba(20,94,183,0.2);">
+                                    Aujourd'hui
+                                </button>
+                            </div>
+                        </div>
+
+                        {# Legend #}
+                        <div class="flex items-center gap-4 mt-4 flex-wrap">
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded" style="background-color: #145EB7;"></span>Aujourd'hui</div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded bg-rose-100 border border-rose-200 dark:bg-rose-950/30 dark:border-rose-800/50"></span>Jour ferie</div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded border-l-2" style="background-color: rgba(63,169,245,0.15); border-color: #3FA9F5;"></span>Employe en conge</div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded bg-zinc-100 dark:bg-zinc-800"></span>Weekend</div>
+                        </div>
+                    </div>
+
+                    <div class="p-6" data-calendar-target="grid"></div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+function decS1(el){el.querySelector('.dec-s0').classList.add('hidden');el.querySelector('.dec-s1').classList.remove('hidden');}
+function decS2(el,a){el.querySelector('.dec-s1').classList.add('hidden');var f,label=el.dataset.approveLabel;if(a==='approve'){f=el.querySelector('.dec-s2a');f.action=el.dataset.approveUrl;f.querySelector('[name="_token"]').value=el.dataset.approveToken;f.querySelector('.dec-approve-label').textContent=label;f.classList.remove('hidden');}else{f=el.querySelector('.dec-s2r');f.action=el.dataset.rejectUrl;f.querySelector('[name="_token"]').value=el.dataset.rejectToken;f.classList.remove('hidden');}}
+function decReset(el){el.querySelector('.dec-s0').classList.remove('hidden');['dec-s1','dec-s2a','dec-s2r'].forEach(function(c){var n=el.querySelector('.'+c);if(n)n.classList.add('hidden');});}
+async function decAi(el,action){
+    if(!el){return;}
+    var formSelector = action === 'approve' ? '.dec-s2a' : '.dec-s2r';
+    var form = el.querySelector(formSelector);
+    if(!form){return;}
+    var input = form.querySelector('input[name="rh_comment"]');
+    var btn = form.querySelector('button[onclick*="decAi"]');
+    var notice = form.querySelector('.dec-ai-notice');
+    if(!input || !btn){return;}
+
+    var initialLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generation...';
+
+    try {
+        var response = await fetch(el.dataset.aiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                _token: el.dataset.aiToken,
+                leave_id: parseInt(el.dataset.aiLeaveId || '0', 10),
+                action: action === 'reject' ? 'REJECT' : 'APPROVE'
+            })
+        });
+        var data = await response.json();
+        if(!response.ok || !data.success){
+            throw new Error((data && data.message) ? data.message : 'Generation IA indisponible.');
+        }
+
+        input.value = data.suggestion || '';
+        if(notice){
+            notice.textContent = data.notice || 'Texte suggere par IA, a verifier avant envoi.';
+            notice.classList.remove('hidden');
+        }
+    } catch (error) {
+        alert(error.message || 'Generation IA indisponible.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = initialLabel;
+    }
+}
+</script>
+{% endblock %}

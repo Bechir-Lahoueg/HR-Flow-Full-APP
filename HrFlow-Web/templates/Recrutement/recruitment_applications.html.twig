@@ -1,0 +1,540 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Applications | HrFlow Recruitment{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .app-row { transition: all .2s; }
+        .app-row:hover { background: #f8fafc; transform: scale(1.001); }
+        .pipeline-stage { transition: all .2s; cursor: pointer; }
+        .pipeline-stage:hover { transform: translateY(-2px); }
+        .cv-badge { backdrop-filter: blur(4px); }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[#f8f9fb] dark:bg-zinc-950 dot-grid">
+    {% include 'DashboardHr/components/_sidebar.html.twig' %}
+
+    <div class="lg:ml-[272px] transition-all duration-300">
+        {% include 'DashboardHr/components/_header.html.twig' %}
+
+        {% for message in app.flashes('success') %}
+            <div class="mx-6 mt-4 px-4 py-3 rounded-xl bg-formation-50 border border-formation-200 text-formation-600 text-sm font-medium flex items-center gap-2 animate-slide-up">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="mx-6 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-2 animate-slide-up">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+
+
+        <div class="flex justify-center px-6 pt-2 pb-4">
+            {% include 'Recrutement/_recruitment_nav.html.twig' %}
+        </div>
+
+        <main class="p-6 space-y-6 max-w-7xl mx-auto">
+
+            {# ══════════ Hero ══════════ #}
+            <section class="relative overflow-hidden rounded-2xl text-white p-8 md:p-10 animate-slide-up" style="background: linear-gradient(to bottom right, #022E69, #0a3d8f, #051f3d);">
+                <div class="absolute -left-16 bottom-0 h-56 w-56 rounded-full blur-3xl mesh-blob" style="background: radial-gradient(circle, rgba(63, 169, 245, 0.15), transparent 70%);"></div>
+                <div class="absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl mesh-blob-alt" style="background: radial-gradient(circle, rgba(20, 94, 183, 0.15), transparent 70%);"></div>
+                <div class="relative z-10 grid lg:grid-cols-[1.15fr_0.85fr] gap-6 items-center">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: #3FA9F5;"></div>
+                            <span class="text-[11px] font-bold uppercase tracking-[0.15em]" style="color: #3FA9F5;">Talent Pipeline</span>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-extrabold leading-tight">Gestion des candidatures</h2>
+                        {% if currentOffer is defined and currentOffer %}
+                            <p class="mt-2 text-[13px] font-semibold flex items-center gap-2" style="color: #74c4f8;">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z"/></svg>
+                                Filtre : {{ currentOffer.title }}
+                            </p>
+                        {% else %}
+                            <p class="mt-3 text-[15px] max-w-xl leading-relaxed" style="color: rgba(203,213,225,0.9);">Suivez et gérez toutes vos candidatures. Faites avancer les talents dans votre pipeline de recrutement.</p>
+                        {% endif %}
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4 transition-colors group" style="background: rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            <p class="text-[9px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63,169,245,0.7);">Total candidats</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num group-hover:scale-105 transition-transform origin-left">{{ stats.totalApplications|default(0) }}</p>
+                            <p class="text-xs mt-1" style="color: rgba(203,213,225,0.6);">candidatures reçues</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 backdrop-blur-sm p-4 transition-colors group" style="background: rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            <p class="text-[9px] uppercase tracking-[0.15em] font-bold" style="color: rgba(63,169,245,0.7);">En attente</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num group-hover:scale-105 transition-transform origin-left">{{ stats.pendingApplications|default(0) }}</p>
+                            <p class="text-xs mt-1" style="color: rgba(203,213,225,0.6);">à examiner</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {# ══════════ Pipeline Stats ══════════ #}
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                {% set stages = [
+                    {key: 'PENDING', label: 'En attente', color: 'amber', icon: 'clock'},
+                    {key: 'REVIEWING', label: 'En revue', color: 'blue', icon: 'eye'},
+                    {key: 'INTERVIEW', label: 'Entretien', color: 'violet', icon: 'chat'},
+                    {key: 'OFFER', label: 'Offre', color: 'teal', icon: 'star'},
+                    {key: 'HIRED', label: 'Recruté', color: 'emerald', icon: 'check'},
+                    {key: 'REJECTED', label: 'Rejeté', color: 'red', icon: 'x'},
+                ] %}
+                {% for stage in stages %}
+                <div class="pipeline-stage bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/60 dark:border-zinc-800/50 p-4 text-center shadow-sm">
+                    <p class="text-2xl font-extrabold font-mono-num
+                        {% if stage.color == 'amber' %}text-amber-600
+                        {% elseif stage.color == 'blue' %}text-blue-600
+                        {% elseif stage.color == 'violet' %}text-formation-600
+                        {% elseif stage.color == 'teal' %}text-formation-600
+                        {% elseif stage.color == 'emerald' %}text-formation-600
+                        {% else %}text-red-500{% endif %}">
+                        {{ stats.statusCounts[stage.key]|default(0) }}
+                    </p>
+                    <p class="text-[11px] font-semibold text-slate-500 mt-1">{{ stage.label }}</p>
+                    <div class="mt-2 h-1 rounded-full bg-zinc-100 overflow-hidden">
+                        {% set count = stats.statusCounts[stage.key]|default(0) %}
+                        {% set total = stats.totalApplications|default(1) %}
+                        <div class="h-full rounded-full
+                            {% if stage.color == 'amber' %}bg-amber-400
+                            {% elseif stage.color == 'blue' %}bg-blue-400
+                            {% elseif stage.color == 'violet' %}bg-formation-400
+                            {% elseif stage.color == 'teal' %}bg-formation-400
+                            {% elseif stage.color == 'emerald' %}bg-formation-400
+                            {% else %}bg-red-400{% endif %}"
+                             style="width: {{ total > 0 ? (count / total * 100)|round : 0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# ══════════ Filter Bar + Table ══════════ #}
+            <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800/50 shadow-sm">
+                <div class="p-5 border-b border-slate-100 dark:border-zinc-800">
+                    <form method="get" action="{{ path('app_rh_applications') }}" class="flex flex-wrap gap-3 items-end">
+                        <div class="flex-1 min-w-[180px]">
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Offre d'emploi</label>
+                            <select name="job_offer_id" class="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-zinc-800 dark:border-zinc-700 px-3 py-2 text-sm text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-formation-400">
+                                <option value="">Toutes les offres</option>
+                                {% for offer in allOffers %}
+                                    <option value="{{ offer.id }}" {% if app.request.query.get('job_offer_id') == offer.id %}selected{% endif %}>{{ offer.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[160px]">                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Rechercher</label>
+                            <input name="search" type="text" value="{{ app.request.query.get('search') }}" class="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-zinc-800 dark:border-zinc-700 px-3 py-2 text-sm text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-formation-400 placeholder-slate-400" placeholder="Nom ou email..." />
+                        </div>
+                        <div class="flex-1 min-w-[140px]">                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Statut</label>
+                            <select name="status" class="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-zinc-800 dark:border-zinc-700 px-3 py-2 text-sm text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-formation-400">
+                                <option value="">Tous</option>
+                                <option value="PENDING" {% if app.request.query.get('status') == 'PENDING' %}selected{% endif %}>En attente</option>
+                                <option value="REVIEWING" {% if app.request.query.get('status') == 'REVIEWING' %}selected{% endif %}>En revue</option>
+                                <option value="INTERVIEW" {% if app.request.query.get('status') == 'INTERVIEW' %}selected{% endif %}>Entretien</option>
+                                <option value="OFFER" {% if app.request.query.get('status') == 'OFFER' %}selected{% endif %}>Offre</option>
+                                <option value="HIRED" {% if app.request.query.get('status') == 'HIRED' %}selected{% endif %}>Recruté</option>
+                                <option value="REJECTED" {% if app.request.query.get('status') == 'REJECTED' %}selected{% endif %}>Rejeté</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[140px]">
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Département</label>
+                            <input name="department" type="text" value="{{ app.request.query.get('department') }}" class="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-zinc-800 dark:border-zinc-700 px-3 py-2 text-sm text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-formation-400 placeholder-slate-400" placeholder="ex. Tech" />
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-formation-600 text-white hover:bg-formation-700 transition-colors shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/></svg>
+                                Filtrer
+                            </button>
+                            <a href="{{ path('app_rh_applications') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                                Reset
+                            </a>
+                        </div>
+                    </form>
+                    
+{# Bulk Actions Form - Single Symfony Form wrapping table #}
+    {% if bulkForm %}
+    {{ form_start(bulkForm, {'attr': {'class': 'bulk-form'}}) }}
+    <div class="mt-4 flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700">
+        <span class="text-xs font-semibold text-slate-500 uppercase shrink-0">Actions groupées:</span>
+        {{ form_widget(bulkForm.action, {'attr': {'class': 'rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-formation-400'}}) }}
+        <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-formation-600 text-white hover:bg-formation-700 transition-colors shrink-0">
+            Appliquer
+        </button>
+    </div>
+                    {% endif %}
+                </div>
+
+                <div class="overflow-x-auto -mx-5 px-5">
+                    <table class="w-full text-sm min-w-[900px]">
+                        <thead>
+                            <tr class="border-b border-slate-100 dark:border-zinc-800 text-left">
+                                <th class="px-3 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-10">
+                                    {# Bulk selection via Symfony form #}
+                                </th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Candidat</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Offre / Département</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Expérience</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Source</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Statut</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Documents</th>
+                                <th class="px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 dark:divide-zinc-800/50">
+                            {% if bulkForm %}
+                            {% for app in pagination %}
+                            <tr class="app-row">
+                                <td class="px-3 py-4">
+                                    {# Render checkbox from Symfony form by matching choice value to app id #}
+                                    {% for choice in bulkForm.selected %}
+                                        {% if choice.vars.value == app.id %}
+                                            {{ form_widget(choice, {'attr': {'class': 'rounded border-slate-300 text-formation-600 focus:ring-formation-500'}}) }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-formation-600 to-formation-500 flex items-center justify-center shrink-0 shadow-sm shadow-formation-600/30">
+                                            <span class="text-[12px] font-bold text-white">{{ app.candidateName|first|upper }}</span>
+                                        </div>
+                                        <div>
+                                            <p class="text-[13px] font-bold text-slate-800 dark:text-zinc-100">{{ app.candidateName }}</p>
+                                            {% if app.emailAddress %}
+                                                <p class="text-[11px] text-slate-400">{{ app.emailAddress }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-[13px] font-semibold text-slate-700 dark:text-zinc-300">{{ app.jobOffer.title|default('—') }}</p>
+                                    {% if app.department %}
+                                        <span class="text-[11px] text-slate-400">{{ app.department }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-4">
+                                    {% if app.experienceLevel %}
+                                        <span class="px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">{{ app.experienceLevel }}</span>
+                                    {% else %}
+                                        <span class="text-slate-300">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-4">
+                                    {% if app.source %}
+                                        <span class="text-[12px] text-slate-500 font-medium">{{ app.source }}</span>
+                                    {% else %}
+                                        <span class="text-slate-300">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-4 text-[12px] text-slate-400 whitespace-nowrap">{{ app.appliedAt|date('d M Y') }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold
+                                        {% if app.status == 'PENDING' %}bg-amber-50 text-amber-700 border border-amber-200
+                                        {% elseif app.status == 'REVIEWING' %}bg-blue-50 text-blue-700 border border-blue-200
+                                        {% elseif app.status == 'INTERVIEW' %}bg-formation-50 text-formation-600 border border-formation-200
+                                        {% elseif app.status == 'OFFER' %}bg-formation-50 text-formation-600 border border-formation-200
+                                        {% elseif app.status == 'HIRED' %}bg-formation-50 text-formation-600 border border-formation-200
+                                        {% else %}bg-red-50 text-red-600 border border-red-200{% endif %}">
+                                        <span class="w-1.5 h-1.5 rounded-full
+                                            {% if app.status == 'PENDING' %}bg-amber-500 animate-pulse
+                                            {% elseif app.status == 'REVIEWING' %}bg-blue-500
+                                            {% elseif app.status == 'INTERVIEW' %}bg-formation-500
+                                            {% elseif app.status == 'OFFER' %}bg-formation-500
+                                            {% elseif app.status == 'HIRED' %}bg-formation-500
+                                            {% else %}bg-red-500{% endif %}"></span>
+                                        {{ app.status }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-2">
+                                        {% if app.cvPath %}
+                                            <a href="{{ asset(app.cvPath) }}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-formation-50 hover:text-formation-600 transition-colors border border-slate-200">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                                                CV
+                                            </a>
+                                        {% endif %}
+                                        {% if app.coverLetterPath %}
+                                            <a href="{{ asset(app.coverLetterPath) }}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-formation-50 text-formation-600 hover:bg-formation-100 transition-colors border border-formation-100">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                                LM
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-2">
+                                        {# Status change dropdown #}
+                                        <form method="post" action="{{ path('app_rh_applications_status', {id: app.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('application_status_' ~ app.id) }}">
+                                            <select name="status" onchange="this.form.submit()" class="text-[11px] font-semibold rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-slate-600 focus:outline-none focus:border-formation-400 cursor-pointer">
+                                                <option value="PENDING" {% if app.status == 'PENDING' %}selected{% endif %}>En attente</option>
+                                                <option value="REVIEWING" {% if app.status == 'REVIEWING' %}selected{% endif %}>En revue</option>
+                                                <option value="INTERVIEW" {% if app.status == 'INTERVIEW' %}selected{% endif %}>Entretien</option>
+                                                <option value="OFFER" {% if app.status == 'OFFER' %}selected{% endif %}>Offre</option>
+                                                <option value="HIRED" {% if app.status == 'HIRED' %}selected{% endif %}>Recruté</option>
+                                                <option value="REJECTED" {% if app.status == 'REJECTED' %}selected{% endif %}>Rejeté</option>
+                                            </select>
+                                        </form>
+                                        <a href="{{ path('app_rh_interviews', {application_id: app.id}) }}" class="p-1.5 rounded-lg text-slate-400 hover:bg-formation-50 hover:text-formation-600 transition-colors" title="Voir les entretiens">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"/></svg>
+                                        </a>
+                                        <a href="{{ path('app_rh_applications_show', {id: app.id}) }}" class="p-1.5 rounded-lg text-slate-400 hover:bg-formation-50 hover:text-formation-600 transition-colors" title="Voir détails">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                        </a>
+                                        <a href="{{ path('app_rh_applications_edit', {id: app.id}) }}" class="p-1.5 rounded-lg text-slate-400 hover:bg-formation-50 hover:text-formation-600 transition-colors" title="Modifier">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                                        </a>
+                                        <button type="button" onclick="openModal('deleteApplicationModal{{ app.id }}')" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                        </button>
+
+                                        {# Soft Delete Confirmation Modal #}
+                                        {% include 'Recrutement/confirmation_modal.html.twig' with {
+                                            modal_id: 'deleteApplicationModal' ~ app.id,
+                                            title: 'Supprimer la candidature',
+                                            message: 'Êtes-vous sûr de vouloir supprimer la candidature de "' ~ app.candidateName ~ '" ? Cette action peut être annulée.',
+                                            confirm_button_text: 'Supprimer',
+                                            confirm_button_class: 'bg-rose-600 hover:bg-rose-700',
+                                            form_action: path('app_rh_applications_delete', {id: app.id}),
+                                            csrf_token: csrf_token('delete_application_' ~ app.id)
+                                        } %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="py-14 text-center text-slate-400 text-sm">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                                            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                                        </div>
+                                        Aucune candidature pour les filtres actuels.
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                {{ form_end(bulkForm) }}
+                
+                {# Pagination #}
+                {% if pagination is defined and pagination.pageCount > 1 %}
+                <div class="mt-6 flex justify-center">
+                    {{ knp_pagination_render(pagination, '@KnpPaginator/Pagination/sliding.html.twig', {}, {
+                        'class': 'pagination flex gap-1',
+                        'page_attr': 'class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"',
+                        'current_class': 'px-3 py-1.5 rounded-lg text-sm font-bold bg-formation-600 text-white',
+                        'first_page_class': 'px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100',
+                        'last_page_class': 'px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100',
+                        'previous_class': 'px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100',
+                        'next_class': 'px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100'
+                    }) }}
+                </div>
+                {% endif %}
+            </section>
+
+            {# ══════════ Deleted Applications Section ══════════ #}
+            {% if deletedApplications is defined and deletedApplications|length > 0 %}
+            <div class="mt-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h9.75m-15 0V6a2.25 2.25 0 012.25-2.25h6a2.25 2.25 0 012.25 2.25v1.5"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-zinc-100">Candidatures supprimées</h3>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">{{ deletedApplications|length }}</span>
+                </div>
+
+                <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-rose-200/60 dark:border-rose-900/30 shadow-sm overflow-hidden">
+                    <div class="divide-y divide-slate-50 dark:divide-zinc-800/50">
+                        {% for app in deletedApplications %}
+                        <div class="p-5 hover:bg-rose-50/30 dark:hover:bg-rose-900/10 transition-colors">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-100 to-orange-100 flex items-center justify-center shrink-0">
+                                    <span class="text-[12px] font-bold text-rose-600">{{ app.candidateName|first|upper }}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <div>
+                                            <h4 class="text-[14px] font-bold text-slate-800 dark:text-zinc-300 line-through decoration-rose-400/50">{{ app.candidateName }}</h4>
+                                            <p class="text-[12px] text-slate-400 mt-0.5">{{ app.jobOffer.title|default('—') }} • {{ app.department }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            {# Restore button #}
+                                            <button type="button" onclick="openModal('restoreApplicationModal{{ app.id }}')" class="p-2 rounded-lg text-formation-500 hover:bg-formation-50 hover:text-formation-600 transition-colors" title="Restaurer">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
+                                                </svg>
+                                            </button>
+                                            {# Permanent delete button #}
+                                            <button type="button" onclick="openModal('permanentDeleteApplicationModal{{ app.id }}')" class="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors" title="Supprimer définitivement">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 text-[12px] text-slate-400">Supprimée le {{ app.updatedAt|default(app.appliedAt)|date('d M Y à H:i') }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Restore Confirmation Modal #}
+                        {% include 'Recrutement/confirmation_modal.html.twig' with {
+                            modal_id: 'restoreApplicationModal' ~ app.id,
+                            title: 'Restaurer la candidature',
+                            message: 'Êtes-vous sûr de vouloir restaurer la candidature de "' ~ app.candidateName ~ '" ?',
+                            confirm_button_text: 'Restaurer',
+                            confirm_button_class: 'bg-formation-600 hover:bg-formation-700',
+                            form_action: path('app_rh_applications_restore', {id: app.id}),
+                            csrf_token: csrf_token('restore_application_' ~ app.id)
+                        } %}
+
+                        {# Permanent Delete Confirmation Modal #}
+                        {% include 'Recrutement/confirmation_modal.html.twig' with {
+                            modal_id: 'permanentDeleteApplicationModal' ~ app.id,
+                            title: 'Suppression définitive',
+                            message: 'Cette action est irréversible. La candidature de "' ~ app.candidateName ~ '" sera définitivement supprimée.',
+                            confirm_button_text: 'Supprimer définitivement',
+                            confirm_button_class: 'bg-rose-600 hover:bg-rose-700',
+                            form_action: path('app_rh_applications_delete_permanent', {id: app.id}),
+                            csrf_token: csrf_token('permanent_delete_application_' ~ app.id)
+                        } %}
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<script>
+// Modal functions - included once for all modals
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    modal.classList.remove('hidden');
+    
+    const backdrop = modal.querySelector('.modal-backdrop');
+    if (backdrop) {
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+        }, 10);
+    }
+    
+    const panel = modal.querySelector('.modal-panel');
+    if (panel) {
+        setTimeout(() => {
+            panel.classList.remove('opacity-0', 'scale-95');
+            panel.classList.add('opacity-100', 'scale-100');
+        }, 10);
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    const backdrop = modal.querySelector('.modal-backdrop');
+    const panel = modal.querySelector('.modal-panel');
+    
+    if (backdrop) {
+        backdrop.classList.remove('opacity-100');
+        backdrop.classList.add('opacity-0');
+    }
+    if (panel) {
+        panel.classList.remove('opacity-100', 'scale-100');
+        panel.classList.add('opacity-0', 'scale-95');
+    }
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 200);
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-backdrop')) {
+        const modal = e.target.closest('[id$="Modal"]');
+        if (modal) closeModal(modal.id);
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const openModal = document.querySelector('[id$="Modal"]:not(.hidden)');
+        if (openModal) closeModal(openModal.id);
+    }
+});
+
+// Bulk actions functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllApplications');
+    const checkboxes = document.querySelectorAll('.application-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const bulkForm = document.getElementById('bulkActionForm');
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+    
+    checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            // Uncheck "select all" if any checkbox is unchecked
+            if (!checkbox.checked && selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+            // Check "select all" if all checkboxes are checked
+            if (selectAllCheckbox) {
+                const allChecked = Array.from(checkboxes).every(function(cb) {
+                    return cb.checked;
+                });
+                selectAllCheckbox.checked = allChecked;
+            }
+        });
+    });
+    
+    function updateSelectedCount() {
+        const checkedCount = document.querySelectorAll('.application-checkbox:checked').length;
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = checkedCount + ' sélectionné(s)';
+        }
+    }
+    
+    if (bulkForm) {
+        bulkForm.addEventListener('submit', function(e) {
+            const checkedCount = document.querySelectorAll('.application-checkbox:checked').length;
+            const action = bulkForm.querySelector('select[name="action"]').value;
+            
+            if (checkedCount === 0) {
+                e.preventDefault();
+                alert('Veuillez sélectionner au moins une candidature.');
+                return;
+            }
+            
+            if (!action) {
+                e.preventDefault();
+                alert('Veuillez sélectionner une action.');
+                return;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

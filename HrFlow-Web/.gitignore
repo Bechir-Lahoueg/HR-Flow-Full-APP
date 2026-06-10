@@ -1,0 +1,71 @@
+# ----------------------------------------------------------------------------
+# HrFlow-Web (Symfony / PHP) .gitignore
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# Secrets — NEVER commit .env files — they contain secrets
+# (DATABASE_URL, MAILER_DSN, API keys, APP_SECRET, etc.)
+# ----------------------------------------------------------------------------
+.env
+.env.local
+.env.local.php
+.env.*.local
+.env.production
+.env.render
+!.env.example
+
+# Symfony encrypted secrets (private decrypt keys must never be committed)
+/config/secrets/prod/prod.decrypt.private.php
+
+###> symfony/framework-bundle ###
+/var/
+/var/cache/
+/var/log/
+/public/bundles/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> symfony/asset-mapper ###
+/public/assets/
+###< symfony/asset-mapper ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
+
+###> phpstan/phpstan ###
+phpstan.neon
+###< phpstan/phpstan ###
+
+# Node / front-end build
+node_modules/
+.next/
+dist/
+build/
+
+# Uploaded files / user media (do not commit uploads)
+/public/uploads/
+/public/uploads/cv/
+/public/media/
+/uploads/
+
+# Coverage reports
+/coverage/
+/.coverage/
+clover.xml
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

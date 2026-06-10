@@ -1,0 +1,106 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    matrix_client_url: '%env(string:MATRIX_CLIENT_URL)%'
+    matrix_access_token: '%env(string:MATRIX_ACCESS_TOKEN)%'
+    matrix_bot_user_id: '%env(string:MATRIX_BOT_USER_ID)%'
+    huggingface_api_token: '%env(string:HUGGINGFACE_API_TOKEN)%'
+    huggingface_emotion_model: '%env(string:HUGGINGFACE_EMOTION_MODEL)%'
+    upload_dir: '%env(UPLOAD_DIR)%'
+    gemini_api_key: '%env(GEMINI_API_KEY)%'
+    groq_api_key: '%env(GROQ_API_KEY)%'
+    groq_api: '%env(GROQ_API)%'
+    nvidia_api_key: '%env(NVIDIA_API_KEY)%'
+
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            $geminiApiKey: '%gemini_api_key%'
+            $groqApiKey: '%groq_api_key%'
+            $groqApi: '%groq_api%'
+            $nvidiaApiKey: '%nvidia_api_key%'
+            $projectDir: '%kernel.project_dir%'
+            # CORS — injected into CorsSubscriber from cors.yaml
+            $corsAllowOrigins: '%cors.allow_origins%'
+            $corsAllowMethods: '%cors.allow_methods%'
+            $corsAllowHeaders: '%cors.allow_headers%'
+            $corsMaxAge: '%cors.max_age%'
+
+
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            - '../src/Service/AI/'
+
+    # HrFlow Mailer — inject the sender address from .env
+    App\Service\Shared\HrFlowMailer:
+        arguments:
+            $senderAddress: '%env(MAILER_FROM)%'
+
+    App\Service\Shared\MatrixService:
+        arguments:
+            $matrixClientUrl: '%matrix_client_url%'
+            $matrixAccessToken: '%matrix_access_token%'
+            $matrixBotUserId: '%matrix_bot_user_id%'
+
+    App\Service\Shared\HuggingFaceEmotionService:
+        arguments:
+            $apiToken: '%huggingface_api_token%'
+            $model: '%huggingface_emotion_model%'
+
+    # Recruitment Notification Service
+    App\Service\Recrutement\NotificationService:
+        arguments:
+            $senderAddress: '%env(MAILER_FROM)%'
+            $emailsEnabled: '%env(bool:RECRUITMENT_EMAILS_ENABLED)%'
+
+    App\Service\Shared\AiService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\Paie\ChurnPredictionService:
+        arguments:
+            $apiUrl: '%env(CHURN_API_URL)%'
+
+    App\Service\Paie\PayslipMailerService:
+        arguments:
+            $senderAddress: '%env(MAILER_FROM)%'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+    # Auto-tag all classes implementing ToolInterface
+    _instanceof:
+        App\AI\Contract\ToolInterface:
+            tags: ['app.ai_tool']
+
+    # Use Gemma 4 (via Gemini API) as the LLM provider.
+    App\AI\Contract\LlmClientInterface: '@App\AI\Core\GeminiClient'
+
+    App\AI\Core\GeminiClient:
+        arguments:
+            $httpClient: '@http_client'
+            $apiKey: '%gemini_api_key%'
+            $logger: '@logger'
+
+    # QuickChart Service
+    App\Service\QuickChartService:
+        arguments:
+            $useJsLibrary: '%env(bool:QUICKCHART_ENABLED)%'
+
+    # Conversation Memory
+    App\AI\Core\ConversationMemory:
+        arguments:
+            - '@cache.app'

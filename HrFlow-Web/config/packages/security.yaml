@@ -1,0 +1,54 @@
+security:
+    # Password verification is handled manually in LoginFormAuthenticator
+    # to stay compatible with the existing Java SHA-256 hex strategy.
+
+    role_hierarchy:
+        ROLE_ADMIN:     [ROLE_RH, ROLE_EMPLOYEE]
+        ROLE_RH:        [ROLE_EMPLOYEE]
+
+    providers:
+        app_user_provider:
+            id: App\Security\DbUserProvider
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            lazy: true
+            provider: app_user_provider
+            custom_authenticator: App\Security\LoginFormAuthenticator
+            entry_point: App\Security\LoginFormAuthenticator
+            logout:
+                path: app_logout
+                # Logout handling is done by LogoutSubscriber for role-based redirects
+
+            # activate different ways to authenticate
+            # https://symfony.com/doc/current/security.html#the-firewall
+
+            # https://symfony.com/doc/current/security/impersonating_user.html
+            # switch_user: true
+
+    # Easy way to control access for large sections of your site
+    # Note: Only the *first* access control that matches will be used
+    access_control:
+        - { path: ^/(?:_wdt|_profiler|css|images|js|build|assets)/, roles: PUBLIC_ACCESS }
+        - { path: ^/.*\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico)$, roles: PUBLIC_ACCESS }
+        - { path: ^/employee/formation/verify/, roles: PUBLIC_ACCESS }
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/auth/2fa-status, roles: PUBLIC_ACCESS }
+        - { path: ^/auth/2fa-email-code, roles: PUBLIC_ACCESS }
+        - { path: ^/candidat/inscription, roles: PUBLIC_ACCESS }
+        - { path: ^/candidat/connexion, roles: PUBLIC_ACCESS }
+        - { path: ^/$, roles: PUBLIC_ACCESS }
+        - { path: ^/offres-emploi, roles: PUBLIC_ACCESS }
+        - { path: ^/abonnements, roles: PUBLIC_ACCESS }
+        - { path: ^/a-propos, roles: PUBLIC_ACCESS }
+        - { path: ^/contact, roles: PUBLIC_ACCESS }
+        - { path: ^/telechargement, roles: PUBLIC_ACCESS }
+        - { path: ^/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/candidat, roles: ROLE_CANDIDATE }
+        - { path: ^/welcome/admin, roles: ROLE_ADMIN }
+        - { path: ^/welcome/rh, roles: ROLE_RH }
+        - { path: ^/welcome/employee, roles: ROLE_EMPLOYEE }
+        - { path: ^/welcome, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }

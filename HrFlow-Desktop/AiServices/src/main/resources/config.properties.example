@@ -1,0 +1,26 @@
+# ============================================================================
+# AiServices — config template
+# Copy this file to "config.properties" and fill in your REAL keys locally.
+# NEVER commit config.properties — it contains secrets. (It is git-ignored.)
+# Environment variables (GEMINI_API_KEY, GROQ_API_KEY) take precedence over this file.
+# ============================================================================
+
+# Google Gemini API Configuration
+gemini.api.key=AIza_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+llm.provider=groq
+
+groq.api.key=gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+groq.api.model=llama-3.3-70b-versatile
+groq.api.url=https://api.groq.com/openai/v1/chat/completions
+
+# LLM Model Configuration
+gemini.api.model=gemini-3-flash-preview
+gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent
+
+# Report Generation Settings
+report.min.blocks=6
+report.max.blocks=12
+report.min.text.blocks=4
+report.temperature=0.3
+report.max.tokens=4000

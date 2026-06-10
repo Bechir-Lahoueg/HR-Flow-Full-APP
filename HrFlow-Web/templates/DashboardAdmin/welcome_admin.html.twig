@@ -1,0 +1,118 @@
+{% extends 'base.html.twig' %}
+{% import '_widgets/_welcome_widgets.html.twig' as w %}
+
+{% block title %}Tableau de bord Admin | HrFlow{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[#f8f9fb] dark:bg-zinc-950 dot-grid">
+    {% include 'DashboardAdmin/components/_sidebar.html.twig' %}
+
+    <div class="lg:ml-[272px] transition-all duration-300">
+        {% include 'DashboardAdmin/components/_header.html.twig' %}
+
+        {# Flash messages #}
+        {% for message in app.flashes('success') %}
+            <div class="mx-6 mt-4 px-4 py-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-sm font-medium flex items-center gap-2 animate-slide-up">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        <main class="p-6 space-y-6 max-w-7xl mx-auto">
+
+            {# ═══════════════ Welcome Banner (themed) ═══════════════ #}
+            <div class="relative overflow-hidden rounded-2xl p-8 sm:p-10 text-white animate-slide-up"
+                 style="background: {{ admin_theme.banner_gradient|default('linear-gradient(135deg, #7c3aed 0%, #6366f1 55%, #3730a3 100%)') }};">
+
+                <div class="absolute inset-0 overflow-hidden">
+                    <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-white/10 blur-3xl mesh-blob"></div>
+                    <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/15 blur-3xl mesh-blob-alt"></div>
+                </div>
+
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                            <span class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">Système opérationnel</span>
+                        </div>
+
+                        <h2 class="text-3xl sm:text-4xl font-extrabold mb-2">
+                            Bonjour, <span class="text-white/90">{{ user.userIdentifier }}</span>
+                        </h2>
+
+                        <p class="text-violet-200 max-w-xl text-[15px] leading-relaxed">
+                            Pilotage stratégique et veille externe en temps réel. Suivez météo, marchés, actualité et jours fériés.
+                        </p>
+
+                        <div class="mt-5">
+                            <a href="{{ path('app_2fa_setup') }}"
+                               class="inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-2.5 text-sm font-bold text-white border border-white/30 hover:bg-white/25 transition-colors backdrop-blur">
+                                Configurer Google Authenticator
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="hidden md:block shrink-0">
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 min-w-[180px]">
+                            <p class="text-[10px] uppercase tracking-widest text-violet-200 font-bold">Tunis • Maintenant</p>
+                            <p class="text-4xl font-black mt-1 tabular-nums">{{ serverTime|date('H:i') }}</p>
+                            <p class="text-[12px] text-violet-100 mt-1 font-semibold">{{ serverTime|date('d/m/Y') }}</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {# Row 1 #}
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 animate-slide-up stagger-1">
+                <div class="xl:col-span-1">
+                    {{ w.weather(weather, 'violet', path('app_welcome_admin', {refresh: 'weather'})) }}
+                </div>
+                <div class="xl:col-span-2">
+                    {{ w.news(news, 'violet', 'Actualités économie', path('app_welcome_admin', {refresh: 'news'})) }}
+                </div>
+            </div>
+
+            {# Row 2 #}
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 animate-slide-up stagger-2">
+                <div class="xl:col-span-3">
+                    {{ w.forecast(forecast, 'violet', path('app_welcome_admin', {refresh: 'forecast'})) }}
+                </div>
+                <div class="xl:col-span-2">
+                    {{ w.rates(rates, 'violet', path('app_welcome_admin', {refresh: 'rates'})) }}
+                </div>
+            </div>
+
+            {# Row 3 #}
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 animate-slide-up stagger-3">
+                {{ w.holidays(holidays, 'violet', path('app_welcome_admin', {refresh: 'holidays'})) }}
+                {{ w.quote(quote, 'violet', path('app_welcome_admin', {refresh: 'quote'})) }}
+            </div>
+
+            {# Quick Actions #}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slide-up stagger-5">
+
+                <a href="{{ path('app_admin_employees') }}" class="group bg-white dark:bg-zinc-900 rounded-xl border p-5 hover:border-violet-300 transition">
+                    <p class="font-semibold">Gérer les employés</p>
+                    <p class="text-sm text-gray-500">Comptes RH & équipes</p>
+                </a>
+
+                <a href="{{ path('app_admin_leave_exceptions') }}" class="group bg-white dark:bg-zinc-900 rounded-xl border p-5 hover:border-sky-300 transition">
+                    <p class="font-semibold">Exceptions de congés</p>
+                    <p class="text-sm text-gray-500">Cas spéciaux</p>
+                </a>
+
+                <a href="{{ path('app_2fa_setup') }}" class="group bg-white dark:bg-zinc-900 rounded-xl border p-5 hover:border-amber-300 transition">
+                    <p class="font-semibold">Google Authenticator</p>
+                    <p class="text-sm text-gray-500">Sécurité 2FA</p>
+                </a>
+
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

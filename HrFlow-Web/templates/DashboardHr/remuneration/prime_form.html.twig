@@ -1,0 +1,327 @@
+{% extends 'base.html.twig' %}{% set prime = prime|default(null) %}
+{% block title %}{% if prime is defined and prime %}Éditer{% else %}Créer{% endif %} Prime{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        :root {
+            --form-primary-deep: #022E69;
+            --form-primary: #145EB7;
+            --form-accent: #3FA9F5;
+            --form-border: #D0D0D0;
+        }
+
+        html.a11y-high-contrast {
+            --form-primary-deep: #022E69;
+            --form-primary: #145EB7;
+            --form-accent: #3FA9F5;
+            --form-border: #3FA9F5;
+        }
+
+        #prime-page-container {
+            background-color: #f4f7fb !important;
+        }
+        }
+
+        .hero-banner-prime {
+            background: linear-gradient(to bottom right, #022E69, #0a3d8f, #051f3d) !important;
+        }
+
+        .focus-ring:focus {
+            outline: none;
+            border-color: #145EB7 !important;
+            box-shadow: 0 0 0 3px rgba(63, 169, 245, 0.2) !important;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div id="prime-page-container" class="min-h-screen dot-grid">
+    {% include 'DashboardHr/components/_sidebar.html.twig' %}
+
+    <div class="lg:ml-[272px] transition-all duration-300">
+        {% include 'DashboardHr/components/_header.html.twig' %}
+
+        <main class="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
+
+            {# ══════════ Hero Banner ══════════ #}
+            <section class="hero-banner-prime relative overflow-hidden rounded-2xl text-white p-8 md:p-10 animate-slide-up">
+                <div class="absolute -left-16 bottom-0 h-56 w-56 rounded-full blur-3xl" style="background: radial-gradient(circle, rgba(63, 169, 245, 0.15), transparent 70%);"></div>
+                <div class="absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl" style="background: radial-gradient(circle, rgba(20, 94, 183, 0.15), transparent 70%);"></div>
+                <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: #3FA9F5;"></div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider" style="color: #3FA9F5;">Rémunération</span>
+                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold leading-tight">
+                            {% if prime is defined and prime %}Éditer{% else %}Ajouter{% endif %} une Prime
+                        </h1>
+                        <p class="text-slate-300 text-[13px] mt-2">
+                            {% if prime is defined and prime %}Modifiez les détails de cette prime{% else %}Créez une nouvelle prime d'employé{% endif %}
+                        </p>
+                    </div>
+                    <a href="{{ path('app_rh_payroll_primes') }}"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 backdrop-blur-sm text-white font-medium text-sm transition-colors hover:bg-white/10"
+                       style="background: rgba(255,255,255,0.08);">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        Retour
+                    </a>
+                </div>
+            </section>
+
+            {# ══════════ Form ══════════ #}
+            <form method="POST" class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800/50 p-6 shadow-sm animate-slide-up stagger-1 space-y-6">
+
+                {# Flash messages #}
+                {% for message in app.flashes('error') %}
+                    <div class="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-start gap-3">
+                        <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+
+                {# Section header #}
+                <div class="flex items-center gap-3 pb-4 border-b border-zinc-100 dark:border-zinc-800">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: rgba(20,94,183,0.1);">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: #145EB7;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33"/></svg>
+                    </div>
+                    <h3 class="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Informations de la prime</h3>
+                </div>
+
+                {# Section: Employee & Type #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {# Employé #}
+                    {% if preSelectedEmployeeId or isEditing %}
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2">Employé</label>
+                            <div class="px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                {% if isEditing and prime %}
+                                    {{ prime.employeeId }}
+                                {% else %}
+                                    {% for emp in employees %}
+                                        {% if emp.id == preSelectedEmployeeId %}{{ emp.firstName }} {{ emp.lastName }}{% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <input type="hidden" name="employee_id" value="{% if isEditing and prime %}{{ prime.employeeId }}{% else %}{{ preSelectedEmployeeId }}{% endif %}">
+                        </div>
+                    {% else %}
+                        <div>
+                            <label for="employee_id" class="block text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2">
+                                Employé <span class="text-red-500">*</span>
+                            </label>
+                            <select id="employee_id" name="employee_id" required
+                                    class="focus-ring w-full px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white">
+                                <option value="">-- Sélectionner un employé --</option>
+                                {% for emp in employees %}
+                                    <option value="{{ emp.id }}" {% if prime is defined and prime and prime.employeeId == emp.id %}selected{% endif %}>
+                                        {{ emp.firstName }} {{ emp.lastName }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+
+                    {# Type Prime #}
+                    <div>
+                        <label for="type_prime" class="block text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2">
+                            Type {% if not isEditing %}<span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        {% if isEditing %}
+                            <div class="px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                {{ prime.typePrime.value }}
+                            </div>
+                            <input type="hidden" name="type_prime" value="{{ prime.typePrime.value }}">
+                        {% else %}
+                            <select id="type_prime" name="type_prime" required
+                                    class="focus-ring w-full px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white">
+                                <option value="">-- Sélectionner un type --</option>
+                                {% for value, label in typeChoices %}
+                                    <option value="{{ value }}" {% if prime is defined and prime and prime.typePrime.value == value %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Section: Amount & Date #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {# Montant #}
+                    <div>
+                        <label for="montant" class="block text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2">
+                            Montant (TND) {% if not isEditing %}<span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-400">DT</span>
+                            {% if isEditing %}
+                                <div class="pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm font-bold text-zinc-700 dark:text-zinc-300 font-mono-num">
+                                    {{ prime.montant }}
+                                </div>
+                                <input type="hidden" name="montant" value="{{ prime.montant }}">
+                            {% else %}
+                                <input type="number" id="montant" name="montant" required
+                                       step="0.01" min="0"
+                                       value="{% if prime is defined and prime %}{{ prime.montant }}{% endif %}"
+                                       placeholder="0.00"
+                                       class="focus-ring w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 font-mono-num">
+                            {% endif %}
+                        </div>
+                        <div id="montant_error" class="mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium hidden items-start gap-2">
+                            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                            <span id="montant_error_text"></span>
+                        </div>
+                    </div>
+
+                    {# Date Attribution #}
+                    <div>
+                        <label for="date_attribution" class="block text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2">
+                            Date d'Attribution {% if not isEditing %}<span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        {% if isEditing %}
+                            <div class="px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                                {{ prime.dateAttribution ? prime.dateAttribution|date('Y-m-d') : 'N/A' }}
+                            </div>
+                            <input type="hidden" name="date_attribution" value="{% if prime and prime.dateAttribution %}{{ prime.dateAttribution|date('Y-m-d') }}{% endif %}">
+                        {% else %}
+                            <input type="date" id="date_attribution" name="date_attribution" required
+                                   value="{% if prime is defined and prime and prime.dateAttribution %}{{ prime.dateAttribution|date('Y-m-d') }}{% endif %}"
+                                   class="focus-ring w-full px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white">
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Motif #}
+                <div>
+                    <label for="motif" class="block text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2">Motif</label>
+                    <textarea id="motif" name="motif" rows="4"
+                              placeholder="Raison ou justification de la prime..."
+                              class="focus-ring w-full px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 resize-none">{% if prime is defined and prime %}{{ prime.motif }}{% endif %}</textarea>
+                </div>
+
+                {# CSRF Token #}
+                <input type="hidden" name="_token" value="{% if prime is defined and prime %}{{ csrf_token('edit_prime_' ~ prime.id) }}{% else %}{{ csrf_token('create_prime') }}{% endif %}">
+
+                {# Actions #}
+                <div class="flex items-center gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-white text-sm font-bold transition-all shadow-sm"
+                            style="background: linear-gradient(135deg, #145EB7, #3FA9F5);">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        {% if prime is defined and prime %}Mettre à jour{% else %}Créer{% endif %}
+                    </button>
+                    <a href="{{ path('app_rh_payroll_primes') }}"
+                       class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+
+        </main>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typePrimeSelect = document.getElementById('type_prime');
+    const montantInputElement = document.getElementById('montant');
+    const montantError = document.getElementById('montant_error');
+    const montantErrorText = document.getElementById('montant_error_text');
+    const form = document.querySelector('form');
+
+    let validationRules = {};
+    let rulesLoaded = false;
+    let isEditing = false;
+
+    const isMontantEditable = montantInputElement && montantInputElement.tagName === 'INPUT';
+
+    if (!typePrimeSelect || !montantError) return;
+
+    async function fetchValidationRules() {
+        try {
+            const response = await fetch(`/api/compensation-validations`);
+            if (!response.ok) return;
+            const data = await response.json();
+            validationRules = data.primes || {};
+            rulesLoaded = true;
+        } catch (error) {
+            console.error('Error fetching validation rules:', error);
+        }
+    }
+
+    function validateMontant() {
+        if (!isMontantEditable || isEditing) return true;
+
+        const typeName = typePrimeSelect.value;
+        const montant = parseFloat(montantInputElement.value);
+
+        montantInputElement.classList.remove('border-red-500');
+        montantError.classList.add('hidden');
+        montantError.classList.remove('flex');
+
+        if (!typeName || !rulesLoaded || !validationRules[typeName]) return true;
+        if (isNaN(montant) || montant === '') return true;
+
+        const rules = validationRules[typeName];
+        const min = parseFloat(rules.min);
+        const max = parseFloat(rules.max);
+
+        if (max === 0) return true;
+
+        if (montant < min || montant > max) {
+            montantInputElement.classList.add('border-red-500');
+            montantErrorText.textContent = `${typeName} doit être entre ${min} DT et ${max} DT.`;
+            montantError.classList.remove('hidden');
+            montantError.classList.add('flex');
+            return false;
+        }
+
+        return true;
+    }
+
+    if (typePrimeSelect && isMontantEditable) {
+        typePrimeSelect.addEventListener('change', async function() {
+            const typeName = this.value;
+            if (!typeName) { montantInputElement.value = ''; return; }
+
+            try {
+                const response = await fetch(`/api/prime-default/${encodeURIComponent(typeName)}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.montant > 0) {
+                    montantInputElement.value = data.montant;
+                    montantInputElement.focus();
+                    validateMontant();
+                }
+            } catch (error) {
+                console.error('Error fetching default montant:', error);
+            }
+        });
+
+        montantInputElement.addEventListener('blur', validateMontant);
+        montantInputElement.addEventListener('input', validateMontant);
+        montantInputElement.addEventListener('change', validateMontant);
+    }
+
+    form.addEventListener('submit', function(e) {
+        if (isMontantEditable && !validateMontant()) {
+            e.preventDefault();
+            montantInputElement.focus();
+        }
+    });
+
+    fetchValidationRules();
+
+    if (isMontantEditable && typePrimeSelect.value) {
+        isEditing = false;
+        setTimeout(() => typePrimeSelect.dispatchEvent(new Event('change')), 500);
+    } else if (isMontantEditable && montantInputElement.value) {
+        setTimeout(validateMontant, 500);
+    } else if (!isMontantEditable) {
+        isEditing = true;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1162 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes Conges | HrFlow{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* ── Flatpickr Pro Theme ── */
+        .flatpickr-calendar{border-radius:1.25rem!important;border:1px solid #e2e8f0!important;box-shadow:0 25px 65px -15px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.03)!important;font-family:inherit!important;overflow:hidden;padding:0!important;width:320px!important}
+        .flatpickr-months{background:linear-gradient(135deg,#0f172a,#164e63);padding:1rem 0;border-bottom:2px solid rgba(6,182,212,.3)}
+        .flatpickr-months .flatpickr-month{color:#fff;fill:#fff;height:36px}
+        .flatpickr-current-month{padding:0;font-size:1.05em}
+        .flatpickr-current-month .flatpickr-monthDropdown-months,.flatpickr-current-month input.cur-year{color:#fff!important;font-weight:800;font-size:1em}
+        .flatpickr-months .flatpickr-prev-month,.flatpickr-months .flatpickr-next-month{fill:#94a3b8;padding:8px 12px;border-radius:8px;transition:all .2s}
+        .flatpickr-months .flatpickr-prev-month:hover,.flatpickr-months .flatpickr-next-month:hover{fill:#fff;background:rgba(255,255,255,.1)}
+        .flatpickr-innerContainer{padding:8px 12px 12px}
+        span.flatpickr-weekday{color:#64748b;font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+        .flatpickr-day{border-radius:.625rem;font-weight:600;transition:all .2s;height:38px;line-height:38px;font-size:13px;margin:1px}
+        .flatpickr-day.selected,.flatpickr-day.startRange,.flatpickr-day.endRange{background:linear-gradient(135deg,#0891b2,#0e7490)!important;border-color:transparent!important;box-shadow:0 4px 14px -4px rgba(8,145,178,.5);color:#fff!important}
+        .flatpickr-day.inRange{background:#ecfeff!important;border-color:#ecfeff!important;box-shadow:none}
+        .flatpickr-day:hover{background:#f0fdfa;border-color:#f0fdfa}
+        .flatpickr-day.flatpickr-disabled{color:#94a3b8!important;text-decoration:line-through;opacity:1!important}
+        .flatpickr-day.holiday-disabled{background:#fef2f2!important;color:#b91c1c!important;border-color:#fecaca!important;font-weight:700;font-size:12px}
+        .flatpickr-day.weekend-disabled{background:#f8fafc!important;color:#94a3b8!important;border-color:#f1f5f9!important}
+        .flatpickr-day.leave-disabled{background:#eff6ff!important;color:#1d4ed8!important;border-color:#dbeafe!important;font-weight:700;text-decoration:line-through}
+        .flatpickr-day.today{border:2px solid #06b6d4;color:#06b6d4;font-weight:800}
+        .flatpickr-day.today.selected{color:#fff;border-color:transparent!important}
+        .flatpickr-day.today:hover{background:#ecfeff;border-color:#06b6d4}
+
+        /* ── Type Cards ── */
+        .type-card{position:relative;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1)}
+        .type-card::before{content:'';position:absolute;inset:0;border-radius:.75rem;opacity:0;transition:opacity .25s;background:linear-gradient(135deg,#0f172a,#1e3a5f);z-index:0}
+        .type-card[data-active='true']::before{opacity:1}
+        .type-card[data-active='true']{border-color:transparent;box-shadow:0 8px 24px -8px rgba(15,23,42,.4);transform:translateY(-1px)}
+        .type-card[data-active='true'] .type-icon{background:rgba(255,255,255,.15)!important;color:#fff!important}
+        .type-card[data-active='true'] .type-label{color:#fff}
+        .type-card[data-active='true'] .type-desc{color:rgba(255,255,255,.7)}
+        .type-card[data-active='true'] .type-check{opacity:1;transform:scale(1)}
+        .type-card>*{position:relative;z-index:1}
+        .type-check{opacity:0;transform:scale(.5);transition:all .2s cubic-bezier(.4,0,.2,1)}
+
+        /* ── Simulation Ring ── */
+        .sim-ring{width:64px;height:64px;position:relative}
+        .sim-ring circle{transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1)}
+        .sim-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+
+        /* ── Custom Select ── */
+        .select-pro{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center;background-size:1em;padding-right:2.5rem}
+
+        /* ── History Table ── */
+        .history-row{transition:all .15s ease}
+        .history-row:hover{background:linear-gradient(90deg,#f8fafc,#f1f5f9)}
+        .dark .history-row:hover{background:rgba(255,255,255,.03)}
+        .history-row td{vertical-align:middle}
+
+        /* ── Status pill ── */
+        .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.02em}
+
+        /* ── Form field focus ── */
+        .field-input{transition:all .2s}
+        .field-input:focus{box-shadow:0 0 0 3px rgba(6,182,212,.12)}
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[#f8f9fb] dark:bg-zinc-950 dot-grid">
+    {% include 'DashboardEmployee/components/_sidebar.html.twig' %}
+
+    <div class="lg:ml-[272px] transition-all duration-300">
+        {% include 'DashboardEmployee/components/_header.html.twig' %}
+
+        {% for message in app.flashes('success') %}
+            <div class="mx-6 lg:mx-8 mt-4 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-sm font-medium flex items-center gap-2.5 animate-slide-up">
+                <div class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                </div>
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="mx-6 lg:mx-8 mt-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-sm font-medium flex items-center gap-2.5 animate-slide-up">
+                <div class="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        <main class="p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto"
+              data-controller="tab-switcher"
+              data-tab-switcher-active-value="0">
+
+            {# ═══════════ ON LEAVE BANNER ═══════════ #}
+            {% if isOnLeave|default(false) %}
+            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white p-5 animate-slide-up">
+                <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+                <div class="relative z-10 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Vous etes actuellement en conge</h3>
+                        <p class="text-sm text-white/80 mt-0.5">Profitez bien de votre repos ! Votre conge est en cours.</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {# ═══════════ HERO BANNER ═══════════ #}
+            <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-cyan-950 to-teal-900 text-white p-8 md:p-10 animate-slide-up">
+                <div class="absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl mesh-blob"></div>
+                <div class="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-teal-300/15 blur-3xl mesh-blob-alt"></div>
+                <div class="absolute top-1/2 left-1/3 h-32 w-32 rounded-full bg-sky-400/10 blur-3xl"></div>
+
+                <div class="relative z-10 grid lg:grid-cols-[1fr_1fr] gap-8 items-center">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                            <span class="text-[11px] font-bold text-cyan-200 uppercase tracking-[0.15em]">Espace Employe</span>
+                        </div>
+                        <h2 class="text-3xl md:text-5xl font-display leading-[1.1] tracking-tight">Mes Conges</h2>
+                        <p class="mt-3 text-[14px] text-slate-300/90 max-w-lg leading-relaxed">Gerez vos demandes de conge, consultez votre solde et suivez l'etat de vos demandes en temps reel.</p>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-sm p-4 hover:bg-white/[0.12] transition-colors group">
+                            <p class="text-[9px] uppercase tracking-[0.15em] text-cyan-200/60 font-bold">Disponible</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num group-hover:scale-105 transition-transform origin-left">{{ balance.available_days|number_format(1, '.', ',') }}</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-sm p-4 hover:bg-white/[0.12] transition-colors group">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[9px] uppercase tracking-[0.15em] text-cyan-200/60 font-bold">Attente</p>
+                                {% if pendingLeaveCount > 0 %}<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>{% endif %}
+                            </div>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num text-amber-300 group-hover:scale-105 transition-transform origin-left">{{ pendingLeaveCount }}</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-sm p-4 hover:bg-white/[0.12] transition-colors group">
+                            <p class="text-[9px] uppercase tracking-[0.15em] text-cyan-200/60 font-bold">Approuves</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num text-emerald-400 group-hover:scale-105 transition-transform origin-left">{{ leaveStats.approved_count|default(0) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-sm p-4 hover:bg-white/[0.12] transition-colors group">
+                            <p class="text-[9px] uppercase tracking-[0.15em] text-cyan-200/60 font-bold">Refuses</p>
+                            <p class="mt-1 text-2xl font-extrabold font-mono-num text-rose-400 group-hover:scale-105 transition-transform origin-left">{{ leaveStats.rejected_count|default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {# ═══════════ TAB NAVIGATION (3 tabs) ═══════════ #}
+            <div class="animate-slide-up stagger-1 overflow-x-auto pb-1">
+                <div class="tab-bar">
+                    <div data-tab-switcher-target="indicator" class="tab-indicator"></div>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="0" class="tab-btn tab-active" role="tab" aria-selected="true">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z"/></svg>
+                        Apercu
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="1" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        Nouvelle Demande
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="2" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Historique
+                        {% if leaveRequests|default([])|length > 0 %}
+                            <span class="tab-count">{{ leaveRequests|length }}</span>
+                        {% endif %}
+                    </button>
+
+                    <button type="button" data-tab-switcher-target="tab" data-action="click->tab-switcher#switch" data-index="3" class="tab-btn tab-inactive" role="tab" aria-selected="false">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-3.75h.008v.008H12v-.008z"/></svg>
+                        Calendrier
+                    </button>
+                </div>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 0: APERCU ════════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="space-y-6">
+                {# Stat Cards #}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="card-surface stat-stripe stat-stripe-sky p-5 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 font-mono-num leading-none">{{ balance.available_days|number_format(1, '.', ',') }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Credit disponible</p>
+                    </div>
+                    <div class="card-surface stat-stripe stat-stripe-amber p-5 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            {% if pendingLeaveCount > 0 %}<span class="w-2.5 h-2.5 rounded-full bg-amber-500 badge-glow-amber"></span>{% endif %}
+                        </div>
+                        <p class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 font-mono-num leading-none">{{ pendingLeaveCount }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">En attente</p>
+                    </div>
+                    <div class="card-surface stat-stripe stat-stripe-emerald p-5 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono-num leading-none">{{ leaveStats.approved_count|default(0) }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Demandes approuvees</p>
+                    </div>
+                    <div class="card-surface stat-stripe stat-stripe-rose p-5 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 font-mono-num leading-none">{{ leaveStats.rejected_count|default(0) }}</p>
+                        <p class="text-[11px] text-zinc-400 mt-2 font-semibold">Demandes refusees</p>
+                    </div>
+                </div>
+
+                {# Balance Details #}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="card-surface p-5">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-[13px] font-bold text-zinc-800 dark:text-zinc-200">Total accumule</p>
+                                <p class="text-[11px] text-zinc-400">Depuis le debut de periode</p>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">{{ balance.total_accrued|number_format(1, '.', ',') }} <span class="text-sm font-medium text-zinc-400">jours</span></p>
+                        <div class="mt-3 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style="width:100%"></div></div>
+                    </div>
+                    <div class="card-surface p-5">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-[13px] font-bold text-zinc-800 dark:text-zinc-200">Jours consommes</p>
+                                <p class="text-[11px] text-zinc-400">Conges utilises</p>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">{{ balance.total_used|number_format(1, '.', ',') }} <span class="text-sm font-medium text-zinc-400">jours</span></p>
+                        <div class="mt-3 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style="width:{% if balance.total_accrued > 0 %}{{ ((balance.total_used / balance.total_accrued) * 100)|round }}{% else %}0{% endif %}%"></div></div>
+                    </div>
+                    <div class="card-surface p-5">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950/30 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-[13px] font-bold text-zinc-800 dark:text-zinc-200">Solde restant</p>
+                                <p class="text-[11px] text-zinc-400">Jours disponibles</p>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-extrabold tabular-nums {% if balance.available_days <= 0 %}text-rose-600 dark:text-rose-400{% else %}text-cyan-600 dark:text-cyan-400{% endif %}">{{ balance.available_days|number_format(1, '.', ',') }} <span class="text-sm font-medium text-zinc-400">jours</span></p>
+                        <div class="mt-3 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-400" style="width:{% if balance.total_accrued > 0 %}{{ ((balance.available_days / balance.total_accrued) * 100)|round }}{% else %}0{% endif %}%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 1: NOUVELLE DEMANDE ══════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="space-y-6 hidden">
+                <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 shadow-[0_1px_3px_rgba(0,0,0,.04)] overflow-hidden animate-slide-up">
+                    {# Form Header #}
+                    <div class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-sm">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Nouvelle Demande de Conge</h3>
+                                <p class="text-[11px] text-zinc-400">Selectionnez vos dates, le type et soumettez</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-[11px] text-zinc-400">
+                            <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 rounded bg-red-100 dark:bg-red-950/40 flex items-center justify-center"><svg class="w-2 h-2 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg></div><span class="font-medium hidden sm:inline">Passes bloques</span></div>
+                            <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center"><svg class="w-2 h-2 text-slate-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5"/></svg></div><span class="font-medium hidden sm:inline">WE exclus</span></div>
+                            <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 rounded bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center"><svg class="w-2 h-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-1a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"/></svg></div><span class="font-medium hidden sm:inline">Feries TN</span></div>
+                            <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 rounded bg-blue-200 dark:bg-blue-900/40 flex items-center justify-center"><svg class="w-2 h-2 text-blue-700" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6"/></svg></div><span class="font-medium hidden sm:inline">Deja en conge</span></div>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <form method="post" enctype="multipart/form-data" novalidate>
+                            <input type="hidden" name="_token" value="{{ csrf_token('employee_leave_submit') }}">
+                            <input type="hidden" name="leave_type" id="leave_type" value="Conge annuel">
+                            <input type="hidden" name="request_mode" id="request_mode" value="NORMAL">
+
+                            {% if balance.available_days <= 0 %}
+                                <div class="flex gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 mb-5">
+                                    <div class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                                        <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Credit epuise (0 jour)</p>
+                                        <p class="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5">Le conge normal est bloque. Utilisez la demande exceptionnelle avec justificatif.</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# ── HORIZONTAL LAYOUT: Dates + Type + Reason + Simulation + Submit ── #}
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+                                {# Col 1: Dates #}
+                                <div class="lg:col-span-2 space-y-4">
+                                    <div>
+                                        <label for="start_date" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Date debut</label>
+                                        <div class="relative">
+                                            <input id="start_date" name="start_date" type="text" autocomplete="off" readonly placeholder="Selectionner"
+                                                   class="field-input w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm pl-10 pr-4 py-3 cursor-pointer focus:border-cyan-500 focus:ring-cyan-500 transition-all placeholder:text-zinc-300 font-medium">
+                                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="end_date" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Date fin</label>
+                                        <div class="relative">
+                                            <input id="end_date" name="end_date" type="text" autocomplete="off" readonly placeholder="Selectionner"
+                                                   class="field-input w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm pl-10 pr-4 py-3 cursor-pointer focus:border-cyan-500 focus:ring-cyan-500 transition-all placeholder:text-zinc-300 font-medium">
+                                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {# Col 2: Leave Type #}
+                                <div class="lg:col-span-3">
+                                    <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Type de conge</label>
+                                    <div class="grid grid-cols-3 gap-2" id="leave-type-selector">
+                                        <button type="button" class="type-card flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 p-2.5 text-center" data-value="Conge annuel" data-active="true">
+                                            <div class="type-icon w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950/30 flex items-center justify-center">
+                                                <svg class="w-4 h-4 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+                                            </div>
+                                            <p class="type-label text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Annuel</p>
+                                            <p class="type-desc text-[9px] text-zinc-400">Vacances</p>
+                                            <div class="type-check absolute top-1.5 right-1.5"><svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg></div>
+                                        </button>
+                                        <button type="button" class="type-card flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 p-2.5 text-center" data-value="Conge maladie" data-active="false">
+                                            <div class="type-icon w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center">
+                                                <svg class="w-4 h-4 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+                                            </div>
+                                            <p class="type-label text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Maladie</p>
+                                            <p class="type-desc text-[9px] text-zinc-400">Medical</p>
+                                            <div class="type-check absolute top-1.5 right-1.5"><svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg></div>
+                                        </button>
+                                        <button type="button" class="type-card flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 p-2.5 text-center" data-value="Conge exceptionnel" data-active="false">
+                                            <div class="type-icon w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
+                                                <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                                            </div>
+                                            <p class="type-label text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Exceptionnel</p>
+                                            <p class="type-desc text-[9px] text-zinc-400">Special</p>
+                                            <div class="type-check absolute top-1.5 right-1.5"><svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg></div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {# Col 3: Reason #}
+                                <div class="lg:col-span-3">
+                                    <label for="reason" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Motif <span class="text-zinc-300 dark:text-zinc-600 normal-case tracking-normal font-normal">(optionnel)</span></label>
+                                    <textarea id="reason" name="reason" rows="4" placeholder="Ajoutez un contexte pour votre RH..."
+                                              class="field-input w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 focus:border-cyan-500 focus:ring-cyan-500 transition-all resize-none placeholder:text-zinc-300"></textarea>
+                                </div>
+
+                                {# Col 4: Simulation + Submit #}
+                                <div class="lg:col-span-4 space-y-4">
+                                    {# Simulation #}
+                                    <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800/50 dark:to-zinc-900 p-3.5">
+                                        <div class="flex items-center gap-3">
+                                            <div class="sim-ring shrink-0">
+                                                <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                                                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="2.5"/>
+                                                    <circle id="sim-ring-progress" cx="18" cy="18" r="15.5" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="97.39" stroke-dashoffset="97.39"/>
+                                                </svg>
+                                                <div class="sim-ring-label">
+                                                    <span id="sim-days" class="text-base font-extrabold text-zinc-800 dark:text-zinc-100 tabular-nums leading-none">0</span>
+                                                    <span class="text-[7px] text-zinc-400 font-medium mt-0.5">jours</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0 space-y-1.5">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Ouvrables</span>
+                                                    <span id="sim-days-label" class="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 tabular-nums">0 jours</span>
+                                                </div>
+                                                <div class="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                                                    <div id="sim-bar" class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500" style="width:0%"></div>
+                                                </div>
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Credit projete</span>
+                                                    <span id="sim-credit" class="text-[12px] font-extrabold text-cyan-700 dark:text-cyan-400 tabular-nums">{{ balance.available_days|number_format(1, '.', ',') }}</span>
+                                                </div>
+                                                <p id="sim-note" class="text-[9px] text-zinc-400 leading-relaxed">Selectionnez vos dates pour voir l'impact.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {# Submit #}
+                                    <button id="leave-submit-btn" type="submit"
+                                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-700 dark:to-slate-600 text-white font-semibold text-sm tracking-wide hover:from-slate-800 hover:to-slate-600 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                                        Soumettre la demande
+                                    </button>
+                                </div>
+                            </div>
+
+                            {# ── Exception Toggle — full width below ── #}
+                            <div class="mt-5 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                                <div class="flex items-center justify-between gap-3 px-4 py-3 bg-zinc-50/80 dark:bg-zinc-800/40">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-7 h-7 rounded-lg bg-violet-100 dark:bg-violet-950/40 flex items-center justify-center">
+                                            <svg class="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">Demande exceptionnelle</p>
+                                            <p class="text-[11px] text-zinc-400">Activez si votre credit est insuffisant ou nul</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="is_exception_request" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-zinc-200 dark:bg-zinc-700 peer-focus:ring-2 peer-focus:ring-cyan-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600 after:shadow-sm"></div>
+                                    </label>
+                                </div>
+
+                                <div id="exception-fields" class="hidden border-t border-zinc-200 dark:border-zinc-700 p-5 bg-white dark:bg-zinc-900">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label for="urgency_level" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Niveau d'urgence</label>
+                                            <select id="urgency_level" name="urgency_level"
+                                                    class="select-pro field-input w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 focus:border-cyan-500 focus:ring-cyan-500 transition-all">
+                                                <option value="">-- Selectionner --</option>
+                                                <option value="LOW">Faible</option>
+                                                <option value="MEDIUM">Moyenne</option>
+                                                <option value="HIGH">Haute</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="justification_mode" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Mode de justification</label>
+                                            <select id="justification_mode"
+                                                    class="select-pro field-input w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 focus:border-cyan-500 focus:ring-cyan-500 transition-all">
+                                                <option value="TEXT">Texte uniquement</option>
+                                                <option value="FILE">Fichier uniquement</option>
+                                                <option value="BOTH">Texte + Fichier</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-start gap-2 p-3 rounded-lg bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-100 dark:border-cyan-900/40 self-center">
+                                            <svg class="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+                                            <p class="text-[11px] text-cyan-800 dark:text-cyan-300 leading-relaxed">Precisez la periode, l'urgence et un justificatif pour votre demande exceptionnelle.</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                        <div id="justificatif-text-wrap">
+                                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                                <label for="justificatif_text" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">Justificatif texte</label>
+                                                <button type="button" id="employee-ai-justify-btn" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-cyan-200 dark:border-cyan-800/50 text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/20 hover:bg-cyan-100 dark:hover:bg-cyan-950/40 transition-colors">
+                                                    Rediger avec IA
+                                                </button>
+                                            </div>
+                                            <textarea id="justificatif_text" name="justificatif_text" rows="2" placeholder="Expliquez votre situation..."
+                                                      class="field-input w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm px-3.5 py-2.5 focus:border-cyan-500 focus:ring-cyan-500 transition-all resize-none placeholder:text-zinc-300"></textarea>
+                                            <p id="employee-ai-justify-notice" class="mt-1 text-[10px] text-zinc-400 hidden">Texte suggere par IA, a verifier avant envoi.</p>
+                                        </div>
+                                        <div id="justificatif-file-wrap">
+                                            <label for="justificatif" class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 mb-1.5">Piece jointe (certificat medical)</label>
+
+                                            {# Dropzone (visible quand aucun fichier selectionne) #}
+                                            <div id="justificatif-dropzone"
+                                                 class="relative rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-cyan-400 dark:hover:border-cyan-600 transition-colors p-4 text-center cursor-pointer bg-zinc-50/50 dark:bg-zinc-800/30">
+                                                <input id="justificatif" name="justificatif" type="file"
+                                                       accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                                <svg class="w-5 h-5 text-zinc-300 dark:text-zinc-600 mx-auto mb-1" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                                                <p class="text-[11px] text-zinc-400"><span class="text-cyan-600 dark:text-cyan-400 font-medium">Cliquez</span> ou deposez un fichier</p>
+                                                <p class="text-[10px] text-zinc-300 dark:text-zinc-600 mt-0.5">PDF, JPG, PNG - Max 3 Mo</p>
+                                            </div>
+
+                                            {# Carte de confirmation (visible des qu'un fichier est choisi) #}
+                                            <div id="justificatif-preview"
+                                                 class="hidden rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+                                                <div class="flex items-start gap-3">
+                                                    <div class="w-9 h-9 rounded-lg bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
+                                                        <svg id="justificatif-icon" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="flex items-center gap-1.5">
+                                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                                                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                                                Fichier pret
+                                                            </span>
+                                                        </div>
+                                                        <p id="justificatif-name" class="mt-1 text-[12px] font-semibold text-zinc-800 dark:text-zinc-200 truncate" title=""></p>
+                                                        <p id="justificatif-meta" class="text-[10px] text-zinc-500 dark:text-zinc-400"></p>
+                                                        <p class="mt-1 text-[10px] text-cyan-700 dark:text-cyan-300">Le certificat sera analyse automatiquement (OCR + resume) apres envoi.</p>
+                                                    </div>
+                                                    <div class="flex flex-col gap-1 shrink-0">
+                                                        <button type="button" id="justificatif-replace"
+                                                                class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border border-cyan-200 dark:border-cyan-800/50 text-cyan-700 dark:text-cyan-300 bg-white dark:bg-zinc-900 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 transition-colors">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                                                            Remplacer
+                                                        </button>
+                                                        <button type="button" id="justificatif-remove"
+                                                                class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border border-rose-200 dark:border-rose-800/50 text-rose-600 dark:text-rose-400 bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+                                                            Supprimer
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p id="justificatif-error" class="hidden mt-2 text-[11px] font-semibold text-rose-600 dark:text-rose-400"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 2: HISTORIQUE ═════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="space-y-6 hidden">
+                <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 shadow-[0_1px_3px_rgba(0,0,0,.04)] overflow-hidden animate-slide-up">
+                    {# History Header #}
+                    <div class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Historique des demandes</h3>
+                                    <p class="text-[11px] text-zinc-400">Suivez l'etat de toutes vos demandes de conge</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="relative">
+                                    <input id="history-search" type="text" placeholder="Rechercher..."
+                                           class="field-input rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm pl-8 pr-3 py-2 w-44 focus:border-violet-400 focus:ring-violet-400 focus:bg-white dark:focus:bg-zinc-700 transition-all placeholder:text-zinc-300">
+                                    <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                                </div>
+                                <select id="history-status"
+                                        class="select-pro field-input rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm px-3 py-2 focus:border-violet-400 focus:ring-violet-400 focus:bg-white dark:focus:bg-zinc-700 transition-all">
+                                    <option value="ALL">Tous les statuts</option>
+                                    <option value="ATTENTE">En attente</option>
+                                    <option value="ACCEPTE">Accepte</option>
+                                    <option value="REFUSE">Refuse</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# History Table #}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-zinc-100 dark:border-zinc-800/50">
+                                    <th class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-5 bg-zinc-50/60 dark:bg-zinc-800/30">Periode</th>
+                                    <th class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Type</th>
+                                    <th class="text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Jours</th>
+                                    <th class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Statut</th>
+                                    <th class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Phase</th>
+                                    <th class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Commentaire RH</th>
+                                    <th class="text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 py-3 px-4 bg-zinc-50/60 dark:bg-zinc-800/30">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body" class="divide-y divide-zinc-50 dark:divide-zinc-800/30">
+                            {% for leave in leaveRequests %}
+                                <tr class="history-row" data-status="{{ leave.status }}" data-search="{{ leave.leaveType|lower }} {{ leave.startDate|date('Y-m-d') }} {{ leave.endDate|date('Y-m-d') }} {{ leave.status|lower }}">
+                                    <td class="py-3.5 px-5">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                                                <span class="text-[12px] font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">{{ leave.startDate|date('d') }}</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">{{ leave.startDate|date('d M Y') }}</p>
+                                                <p class="text-[11px] text-zinc-400">au {{ leave.endDate|date('d M Y') }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">{{ leave.leaveType }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-center">
+                                        <span class="text-[14px] font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">{{ leave.daysCount }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        {% if leave.status == 'ATTENTE' %}
+                                            <span class="status-pill bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>En attente</span>
+                                        {% elseif leave.status == 'ACCEPTE' %}
+                                            <span class="status-pill bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Accepte</span>
+                                        {% elseif leave.status == 'REFUSE' %}
+                                            <span class="status-pill bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Refuse</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        {% if leave.requestCategory == 'EXCEPTION' %}
+                                            {% if leave.workflowStatus == 'RH_PENDING' %}
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/50"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>RH</span>
+                                            {% elseif leave.workflowStatus == 'ADMIN_PENDING' %}
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/50"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Admin</span>
+                                            {% elseif leave.workflowStatus == 'ADMIN_APPROVED' %}
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Validee</span>
+                                            {% elseif leave.workflowStatus == 'FROZEN_UNPROCESSED' %}
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/></svg>Gelee</span>
+                                            {% else %}
+                                                <span class="text-zinc-300 dark:text-zinc-600">-</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-[11px] text-zinc-400">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <div class="space-y-1.5 max-w-[240px]">
+                                            {% if leave.rhComment %}
+                                                <p class="text-[12px] text-zinc-500 dark:text-zinc-400 truncate" title="{{ leave.rhComment }}">{{ leave.rhComment }}</p>
+                                            {% endif %}
+                                            {% if leave.requestCategory == 'EXCEPTION' %}
+                                                {% if leave.attachmentPath %}
+                                                    <a href="{{ leave.attachmentPath }}" target="_blank" rel="noopener"
+                                                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/50 hover:bg-sky-100 dark:hover:bg-sky-950/50 transition-colors">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32"/></svg>
+                                                        Voir mon justificatif
+                                                    </a>
+                                                {% endif %}
+                                                {% if leave.attachmentOcrSummary %}
+                                                    <div class="mt-1 rounded-md border border-slate-200 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-900/40 p-2">
+                                                        <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5">Resume OCR (RH/Admin)</p>
+                                                        <p class="text-[10px] text-slate-600 dark:text-slate-400 line-clamp-3" title="{{ leave.attachmentOcrSummary }}">{{ leave.attachmentOcrSummary }}</p>
+                                                    </div>
+                                                {% elseif leave.attachmentPath %}
+                                                    <p class="text-[10px] italic text-slate-400">OCR en cours / non disponible.</p>
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if not leave.rhComment and leave.requestCategory != 'EXCEPTION' %}
+                                                <span class="text-zinc-300 dark:text-zinc-600">-</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-center">
+                                        {% if leave.status == 'ATTENTE' and leave.workflowStatus != 'FROZEN_UNPROCESSED' %}
+                                            <form method="post" action="{{ path('app_employee_leave_request_delete', {id: leave.id}) }}" onsubmit="return confirm('Etes-vous sur de vouloir supprimer cette demande ?');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('employee_leave_delete_' ~ leave.id) }}">
+                                                <button type="submit" class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                                    Supprimer
+                                                </button>
+                                            </form>
+                                        {% elseif leave.workflowStatus == 'FROZEN_UNPROCESSED' %}
+                                            <span class="text-[10px] text-slate-400 dark:text-slate-500 italic">Gelee auto.</span>
+                                        {% else %}
+                                            <span class="text-zinc-300 dark:text-zinc-600">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="py-20 text-center">
+                                        <svg class="w-14 h-14 text-zinc-200 dark:text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"/></svg>
+                                        <p class="text-sm font-medium text-zinc-400 dark:text-zinc-500">Aucune demande pour le moment</p>
+                                        <p class="text-xs text-zinc-300 dark:text-zinc-600 mt-1">Vos demandes de conge apparaitront ici</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            <tr id="history-empty" class="hidden">
+                                <td colspan="7" class="py-12 text-center">
+                                    <svg class="w-8 h-8 text-zinc-200 dark:text-zinc-700 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                                    <p class="text-sm text-zinc-400 dark:text-zinc-500">Aucun resultat pour ces filtres</p>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            {# ══════════════════════════════════════════════ #}
+            {# ═══════════ PANEL 3: CALENDRIER ════════════ #}
+            {# ══════════════════════════════════════════════ #}
+            <div data-tab-switcher-target="panel" class="hidden">
+                <section class="card-surface overflow-hidden"
+                         data-controller="calendar"
+                         data-calendar-leaves-value="{{ calendarLeaves|default([])|json_encode|e('html_attr') }}"
+                         data-calendar-country-value="TN">
+
+                    <div class="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800/50">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-3.75h.008v.008H12v-.008z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-zinc-800 dark:text-zinc-200">Mon Calendrier</h3>
+                                    <p class="text-[11px] text-zinc-400">Jours feries + vos conges confirmes</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button data-action="click->calendar#prev" class="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                                </button>
+                                <span data-calendar-target="monthLabel" class="text-sm font-bold text-zinc-800 dark:text-zinc-200 min-w-[140px] text-center font-mono-num"></span>
+                                <button data-action="click->calendar#next" class="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                </button>
+                                <button data-action="click->calendar#today" class="px-3 py-1.5 rounded-lg text-[11px] font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/50 hover:bg-teal-100 dark:hover:bg-teal-950/50 transition-colors">
+                                    Aujourd'hui
+                                </button>
+                            </div>
+                        </div>
+
+                        {# Legend #}
+                        <div class="flex items-center gap-4 mt-4 flex-wrap">
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded bg-teal-500 border border-teal-600"></span>Aujourd'hui</div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded bg-rose-100 border border-rose-200 dark:bg-rose-950/30 dark:border-rose-800/50"></span>Jour ferie</div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded bg-teal-100 border-l-2 border-teal-500 dark:bg-teal-950/30"></span>Mon conge confirme</div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500"><span class="w-3 h-3 rounded bg-zinc-100 dark:bg-zinc-800"></span>Weekend</div>
+                        </div>
+                    </div>
+
+                    <div class="p-6" data-calendar-target="grid"></div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+(function () {
+    var holidayDates = {{ blockedHolidayDates|default([])|json_encode|raw }};
+    var holidaySet = new Set(holidayDates);
+    var leaveDates = {{ blockedLeaveDates|default([])|json_encode|raw }};
+    var leaveSet = new Set(leaveDates);
+    var availableCredit = {{ balance.available_days|default(0) }};
+    var circumference = 2 * Math.PI * 15.5;
+
+    var startInput = document.getElementById('start_date');
+    var endInput = document.getElementById('end_date');
+    var simDays = document.getElementById('sim-days');
+    var simDaysLabel = document.getElementById('sim-days-label');
+    var simCredit = document.getElementById('sim-credit');
+    var simNote = document.getElementById('sim-note');
+    var simBar = document.getElementById('sim-bar');
+    var simRing = document.getElementById('sim-ring-progress');
+    var leaveTypeInput = document.getElementById('leave_type');
+    var leaveTypeSelector = document.getElementById('leave-type-selector');
+    var historySearch = document.getElementById('history-search');
+    var historyStatus = document.getElementById('history-status');
+    var historyBody = document.getElementById('history-body');
+    var historyEmpty = document.getElementById('history-empty');
+    var exceptionToggle = document.getElementById('is_exception_request');
+    var exceptionFields = document.getElementById('exception-fields');
+    var requestModeInput = document.getElementById('request_mode');
+    var urgencyInput = document.getElementById('urgency_level');
+    var justificationModeInput = document.getElementById('justification_mode');
+    var justificatifTextWrap = document.getElementById('justificatif-text-wrap');
+    var justificatifFileWrap = document.getElementById('justificatif-file-wrap');
+    var justificatifTextInput = document.getElementById('justificatif_text');
+    var justificatifInput = document.getElementById('justificatif');
+    var submitBtn = document.getElementById('leave-submit-btn');
+    var employeeAiButton = document.getElementById('employee-ai-justify-btn');
+    var employeeAiNotice = document.getElementById('employee-ai-justify-notice');
+    var employeeAiRoute = '{{ path('app_employee_leave_ai_justification') }}';
+    var employeeAiCsrf = '{{ csrf_token('employee_leave_ai_justification') }}';
+
+    function syncJustificationMode() {
+        if (!justificationModeInput) return;
+        var mode = justificationModeInput.value || 'TEXT';
+        var showText = mode === 'TEXT' || mode === 'BOTH';
+        var showFile = mode === 'FILE' || mode === 'BOTH';
+        if (justificatifTextWrap) justificatifTextWrap.classList.toggle('hidden', !showText);
+        if (justificatifFileWrap) justificatifFileWrap.classList.toggle('hidden', !showFile);
+    }
+
+    function syncExceptionMode() {
+        var enabled = !!(exceptionToggle && exceptionToggle.checked);
+        requestModeInput.value = enabled ? 'EXCEPTION' : 'NORMAL';
+        if (exceptionFields) exceptionFields.classList.toggle('hidden', !enabled);
+        syncJustificationMode();
+        if (submitBtn) {
+            var textNode = submitBtn.childNodes[submitBtn.childNodes.length - 1];
+            if (textNode) textNode.textContent = enabled ? ' Soumettre la demande exceptionnelle' : ' Soumettre la demande';
+        }
+
+        if (employeeAiButton) {
+            employeeAiButton.disabled = !enabled;
+            employeeAiButton.classList.toggle('opacity-50', !enabled);
+            employeeAiButton.classList.toggle('cursor-not-allowed', !enabled);
+        }
+    }
+
+    if (exceptionToggle) {
+        exceptionToggle.addEventListener('change', syncExceptionMode);
+        syncExceptionMode();
+    }
+    if (justificationModeInput) {
+        justificationModeInput.addEventListener('change', syncJustificationMode);
+        syncJustificationMode();
+    }
+
+    // ══════════════ Justificatif : feedback fichier (OCR certificat medical) ══════════════
+    (function () {
+        var input = document.getElementById('justificatif');
+        var dropzone = document.getElementById('justificatif-dropzone');
+        var preview = document.getElementById('justificatif-preview');
+        var nameEl = document.getElementById('justificatif-name');
+        var metaEl = document.getElementById('justificatif-meta');
+        var errorEl = document.getElementById('justificatif-error');
+        var replaceBtn = document.getElementById('justificatif-replace');
+        var removeBtn = document.getElementById('justificatif-remove');
+        if (!input || !dropzone || !preview) return;
+
+        var MAX_BYTES = 3 * 1024 * 1024;
+        var ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+
+        function formatSize(bytes) {
+            if (!bytes && bytes !== 0) return '';
+            if (bytes < 1024) return bytes + ' o';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' Ko';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' Mo';
+        }
+
+        function showError(msg) {
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorEl.textContent = '';
+            errorEl.classList.add('hidden');
+        }
+
+        function clearFile() {
+            try { input.value = ''; } catch (e) { /* IE fallback */ input.type = 'text'; input.type = 'file'; }
+            preview.classList.add('hidden');
+            dropzone.classList.remove('hidden');
+            hideError();
+        }
+
+        function showPreview(file) {
+            nameEl.textContent = file.name;
+            nameEl.title = file.name;
+            var ext = (file.name.split('.').pop() || '').toUpperCase();
+            metaEl.textContent = ext + ' • ' + formatSize(file.size);
+            preview.classList.remove('hidden');
+            dropzone.classList.add('hidden');
+            hideError();
+        }
+
+        input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (!file) { clearFile(); return; }
+
+            var mime = (file.type || '').toLowerCase();
+            var ext = (file.name.split('.').pop() || '').toLowerCase();
+            var extOk = ['pdf', 'jpg', 'jpeg', 'png'].indexOf(ext) !== -1;
+            var mimeOk = ALLOWED.indexOf(mime) !== -1 || mime === '';
+
+            if (!extOk || !mimeOk) {
+                clearFile();
+                showPreview({ name: file.name, size: file.size });
+                showError('Format non autorise. Utilisez PDF, JPG ou PNG.');
+                // Garder l'affichage mais vider l'input pour empecher l'envoi
+                try { input.value = ''; } catch (e) {}
+                return;
+            }
+            if (file.size > MAX_BYTES) {
+                showPreview({ name: file.name, size: file.size });
+                showError('Fichier trop volumineux (' + formatSize(file.size) + '). Maximum 3 Mo.');
+                try { input.value = ''; } catch (e) {}
+                return;
+            }
+            showPreview(file);
+        });
+
+        if (removeBtn) removeBtn.addEventListener('click', clearFile);
+        if (replaceBtn) replaceBtn.addEventListener('click', function () { input.click(); });
+
+        // Drag & drop : permettre de deposer sur la zone sans passer par le click
+        ['dragover', 'dragenter'].forEach(function (ev) {
+            dropzone.addEventListener(ev, function (e) {
+                e.preventDefault();
+                dropzone.classList.add('border-cyan-500');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            dropzone.addEventListener(ev, function (e) {
+                e.preventDefault();
+                dropzone.classList.remove('border-cyan-500');
+            });
+        });
+        dropzone.addEventListener('drop', function (e) {
+            var dt = e.dataTransfer;
+            if (!dt || !dt.files || !dt.files.length) return;
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change'));
+        });
+    })();
+
+    function isWeekend(d) { var day = d.getDay(); return day === 0 || day === 6; }
+    function fmtIso(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function isHoliday(d) { return holidaySet.has(fmtIso(d)); }
+    function isOnLeave(d) { return leaveSet.has(fmtIso(d)); }
+    function isDisabled(d) { return isWeekend(d) || isHoliday(d) || isOnLeave(d); }
+
+    function parseDate(v) {
+        if (!v) return null;
+        var p = v.split('-');
+        return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : null;
+    }
+
+    function countWorkingDays(s, e) {
+        var c = 0, d = new Date(s.getTime());
+        while (d <= e) { if (!isDisabled(d)) c++; d.setDate(d.getDate() + 1); }
+        return c;
+    }
+
+    function getDateRangeBreakdown(s, e) {
+        var d = new Date(s.getTime()), totalDays = 0, weekendDays = 0, holidayDays = 0;
+        while (d <= e) {
+            totalDays++;
+            if (isHoliday(d)) holidayDays++;
+            else if (isWeekend(d)) weekendDays++;
+            d.setDate(d.getDate() + 1);
+        }
+        return { totalDays: totalDays, weekendDays: weekendDays, holidayDays: holidayDays, workingDays: totalDays - weekendDays - holidayDays };
+    }
+
+    function updateSim() {
+        var s = parseDate(startInput.value), e = parseDate(endInput.value);
+        if (!s || !e || e < s) {
+            simDays.textContent = '0';
+            simDaysLabel.textContent = '0 jours';
+            simCredit.textContent = availableCredit.toFixed(1);
+            simBar.style.width = '0%';
+            simRing.style.strokeDashoffset = circumference;
+            simCredit.className = 'text-[12px] font-extrabold text-cyan-700 dark:text-cyan-400 tabular-nums';
+            simNote.textContent = "Selectionnez vos dates pour voir l'impact.";
+            return;
+        }
+        var breakdown = getDateRangeBreakdown(s, e);
+        var wd = countWorkingDays(s, e), proj = availableCredit - wd;
+        var ratio = availableCredit > 0 ? Math.min(100, Math.round((wd / availableCredit) * 100)) : 100;
+        simDays.textContent = wd;
+        simDaysLabel.textContent = wd + ' jour' + (wd > 1 ? 's' : '');
+        simCredit.textContent = proj.toFixed(1);
+        simBar.style.width = ratio + '%';
+        simRing.style.strokeDashoffset = circumference - (circumference * ratio / 100);
+        simCredit.className = 'text-[12px] font-extrabold tabular-nums ' + (proj < 0 ? 'text-red-600' : 'text-emerald-600');
+        simBar.className = 'h-full rounded-full transition-all duration-500 ' + (proj < 0 ? 'bg-gradient-to-r from-red-500 to-rose-400' : 'bg-gradient-to-r from-emerald-500 to-teal-400');
+        simRing.style.stroke = proj < 0 ? '#ef4444' : '#10b981';
+        simNote.textContent = breakdown.totalDays + ' cal. - ' + breakdown.holidayDays + ' ferie(s) - ' + breakdown.weekendDays + ' WE = ' + breakdown.workingDays + ' ouvrables';
+        if (proj < 0) simNote.textContent += ' | Solde negatif!';
+    }
+
+    function updateType(val) {
+        leaveTypeInput.value = val;
+        if (!leaveTypeSelector) return;
+        leaveTypeSelector.querySelectorAll('.type-card').forEach(function (b) {
+            b.setAttribute('data-active', b.getAttribute('data-value') === val ? 'true' : 'false');
+        });
+    }
+
+    function filterHistory() {
+        if (!historyBody) return;
+        var q = (historySearch ? historySearch.value : '').trim().toLowerCase();
+        var st = historyStatus ? historyStatus.value : 'ALL';
+        var vis = 0;
+        historyBody.querySelectorAll('tr[data-status]').forEach(function (r) {
+            var show = (st === 'ALL' || r.getAttribute('data-status') === st) && (q === '' || (r.getAttribute('data-search') || '').includes(q));
+            r.classList.toggle('hidden', !show);
+            if (show) vis++;
+        });
+        if (historyEmpty) historyEmpty.classList.toggle('hidden', vis !== 0);
+    }
+
+    async function generateEmployeeAiJustification() {
+        if (!employeeAiButton || !justificatifTextInput) return;
+        if (!exceptionToggle || !exceptionToggle.checked) return;
+
+        var leaveType = leaveTypeInput ? leaveTypeInput.value : '';
+        var startDate = startInput ? startInput.value : '';
+        var endDate = endInput ? endInput.value : '';
+        if (!startDate || !endDate) {
+            alert('Veuillez selectionner les dates avant de generer le justificatif IA.');
+            return;
+        }
+
+        var oldLabel = employeeAiButton.textContent;
+        employeeAiButton.disabled = true;
+        employeeAiButton.textContent = 'Generation...';
+
+        try {
+            var response = await fetch(employeeAiRoute, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    _token: employeeAiCsrf,
+                    leave_type: leaveType,
+                    start_date: startDate,
+                    end_date: endDate,
+                    urgency_level: urgencyInput ? urgencyInput.value : '',
+                    reason: document.getElementById('reason') ? document.getElementById('reason').value : ''
+                })
+            });
+
+            var data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error((data && data.message) ? data.message : 'Generation IA indisponible.');
+            }
+
+            justificatifTextInput.value = data.suggestion || '';
+            if (employeeAiNotice) {
+                employeeAiNotice.textContent = data.notice || 'Texte suggere par IA, a verifier avant envoi.';
+                employeeAiNotice.classList.remove('hidden');
+            }
+        } catch (error) {
+            alert(error.message || 'Generation IA indisponible.');
+        } finally {
+            employeeAiButton.disabled = false;
+            employeeAiButton.textContent = oldLabel;
+        }
+    }
+
+    // ── Initialisation flatpickr robuste ──
+    // Le script CDN peut etre indisponible au moment de l'execution (reseau lent,
+    // bfcache, retour bouton precedent). On initialise quand flatpickr est pret,
+    // et on garde une reference pour eviter les double-init.
+    var flatpickrInstances = { start: null, end: null };
+
+    function getFlatpickrOpts() {
+        return {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: false,
+            clickOpens: true,
+            disableMobile: true,
+            minDate: 'today',
+            disable: [isDisabled],
+            onDayCreate: function (_dObj, _dStr, _fp, dayElem) {
+                var date = dayElem.dateObj;
+                if (!date) return;
+                if (isOnLeave(date)) {
+                    dayElem.classList.add('leave-disabled');
+                    dayElem.title = 'Deja en conge: vous avez une demande acceptee ou en attente sur ce jour';
+                } else if (isHoliday(date)) {
+                    dayElem.classList.add('holiday-disabled');
+                    dayElem.title = 'Jour ferie: non selectable et non compte';
+                } else if (isWeekend(date)) {
+                    dayElem.classList.add('weekend-disabled');
+                    dayElem.title = 'Weekend: non selectable et non compte';
+                }
+            },
+            onChange: updateSim,
+        };
+    }
+
+    function destroyFlatpickr() {
+        ['start', 'end'].forEach(function (k) {
+            if (flatpickrInstances[k] && typeof flatpickrInstances[k].destroy === 'function') {
+                try { flatpickrInstances[k].destroy(); } catch (e) {}
+            }
+            flatpickrInstances[k] = null;
+        });
+    }
+
+    function initFlatpickr() {
+        if (typeof flatpickr !== 'function') return false;
+        if (!startInput || !endInput) return false;
+        // Si une instance existe deja sur l'input, ne pas re-init
+        if (startInput._flatpickr && endInput._flatpickr) {
+            flatpickrInstances.start = startInput._flatpickr;
+            flatpickrInstances.end = endInput._flatpickr;
+            return true;
+        }
+        destroyFlatpickr();
+        var opts = getFlatpickrOpts();
+        flatpickrInstances.start = flatpickr(startInput, opts);
+        flatpickrInstances.end = flatpickr(endInput, opts);
+        return true;
+    }
+
+    function ensureFlatpickr(maxAttempts) {
+        var attempts = 0;
+        var max = maxAttempts || 40; // ~10s max (40 * 250ms)
+        if (initFlatpickr()) return;
+        var timer = setInterval(function () {
+            attempts++;
+            if (initFlatpickr() || attempts >= max) {
+                clearInterval(timer);
+            }
+        }, 250);
+    }
+
+    // Click direct sur le champ : si flatpickr n'est pas encore actif on tente
+    // une init immediate, puis on ouvre le calendrier.
+    function bindManualOpen(input, key) {
+        if (!input) return;
+        var openHandler = function () {
+            if (!input._flatpickr) {
+                initFlatpickr();
+            }
+            if (input._flatpickr && typeof input._flatpickr.open === 'function') {
+                input._flatpickr.open();
+            }
+        };
+        input.addEventListener('focus', openHandler);
+        input.addEventListener('click', openHandler);
+    }
+
+    bindManualOpen(startInput, 'start');
+    bindManualOpen(endInput, 'end');
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { ensureFlatpickr(); });
+    } else {
+        ensureFlatpickr();
+    }
+
+    // Restauration depuis bfcache (bouton precedent) : reinitialiser
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            destroyFlatpickr();
+            ensureFlatpickr();
+        }
+    });
+
+    if (leaveTypeSelector) {
+        leaveTypeSelector.querySelectorAll('.type-card').forEach(function (b) {
+            b.addEventListener('click', function () { updateType(b.getAttribute('data-value') || 'Conge annuel'); });
+        });
+    }
+    if (historySearch) historySearch.addEventListener('input', filterHistory);
+    if (historyStatus) historyStatus.addEventListener('change', filterHistory);
+    if (employeeAiButton) employeeAiButton.addEventListener('click', generateEmployeeAiJustification);
+    startInput.addEventListener('change', updateSim);
+    endInput.addEventListener('change', updateSim);
+    updateType(leaveTypeInput.value || 'Conge annuel');
+    updateSim();
+    filterHistory();
+})();
+</script>
+{% endblock %}

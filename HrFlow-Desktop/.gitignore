@@ -1,0 +1,112 @@
+# ----------------------------------------------------------------------------
+# Secrets — NEVER commit .env files — they contain secrets
+# (DB credentials, GEMINI_API_KEY, GROQ_API_KEY, etc.)
+# ----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# AiServices local config holding DB credentials / API keys
+**/src/main/resources/config.properties
+config.properties
+
+# ==================== MAVEN ====================
+# Ignore build artifacts only — committed dependency jars (if any) stay tracked.
+target/
+out/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+!.mvn/wrapper/maven-wrapper.jar
+
+# ==================== COMPILED / BUILT ARTIFACTS ====================
+*.class
+*.war
+*.ear
+*.nar
+# Built jars produced under target/ are already ignored via target/.
+# If you commit dependency jars (e.g. a /libs folder), whitelist them explicitly:
+#   !libs/*.jar
+
+# ==================== ELECTRON / NODE (if a JS shell is added) ====================
+node_modules/
+dist/
+
+# ==================== LOGS ====================
+*.log
+*.log.*
+logs/
+
+# ==================== IntelliJ IDEA ====================
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ==================== Eclipse ====================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# ==================== NetBeans ====================
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+build/
+
+# ==================== VS Code ====================
+.vscode/
+*.code-workspace
+
+# ==================== Visual Studio ====================
+.vs/
+
+# ==================== macOS ====================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ==================== Windows ====================
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# ==================== Linux ====================
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ==================== JavaFX ====================
+*.fxbuild
+*.launch
+
+# ==================== Database ====================
+*.db
+*.sqlite
+*.sqlite3
+
+# ==================== Temporary files ====================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~.nib
+*.bak
+*.cache

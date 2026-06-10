@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.ui.controller.Rh.Congé.RHLeaveController"
+            fitToWidth="true"
+            style="-fx-background-color: #f4f7fb; -fx-background: #f4f7fb;">
+
+    <VBox spacing="0" style="-fx-background-color: #f4f7fb;">
+
+        <!-- ===== EN-TÊTE  (style Formation : gradient bleu foncé) ===== -->
+        <VBox style="-fx-background-color: linear-gradient(to bottom right, #022E69, #0a3d8f, #051f3d);
+                     -fx-padding: 28 32 28 32;">
+            <HBox alignment="CENTER_LEFT" spacing="16">
+
+                <!-- Titre + sous-titre -->
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="● RH Control Center"
+                               style="-fx-text-fill: #3FA9F5; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    </HBox>
+                    <Label text="Gestion des Congés RH"
+                           style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                    <Label text="Gérez les demandes de congés, consultez les soldes et suivez les statuts des employés."
+                           style="-fx-text-fill: #94a3b8; -fx-font-size: 13px;" wrapText="true"/>
+                </VBox>
+
+                <!-- Stats cards dans le hero (même style que Formation) -->
+                <HBox spacing="12">
+
+                    <!-- Total Demandes -->
+                    <VBox style="-fx-background-color: rgba(255,255,255,0.08);
+                                 -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 10;
+                                 -fx-background-radius: 10; -fx-border-width: 1; -fx-padding: 14 18;">
+                        <Label text="TOTAL DEMANDES"
+                               style="-fx-text-fill: rgba(63,169,245,0.7); -fx-font-size: 9px; -fx-font-weight: bold;"/>
+                        <Label fx:id="totalRequestsLabel" text="0"
+                               style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                        <Label text="enregistrées"
+                               style="-fx-text-fill: rgba(63,169,245,0.6); -fx-font-size: 10px;"/>
+                    </VBox>
+
+                    <!-- En Attente -->
+                    <VBox style="-fx-background-color: rgba(255,255,255,0.08);
+                                 -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 10;
+                                 -fx-background-radius: 10; -fx-border-width: 1; -fx-padding: 14 18;">
+                        <Label text="EN ATTENTE"
+                               style="-fx-text-fill: rgba(63,169,245,0.7); -fx-font-size: 9px; -fx-font-weight: bold;"/>
+                        <Label fx:id="pendingRequestsLabel" text="0"
+                               style="-fx-text-fill: #f59e0b; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                        <Label text="à traiter"
+                               style="-fx-text-fill: rgba(63,169,245,0.6); -fx-font-size: 10px;"/>
+                    </VBox>
+
+                    <!-- Approuvées -->
+                    <VBox style="-fx-background-color: rgba(255,255,255,0.08);
+                                 -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 10;
+                                 -fx-background-radius: 10; -fx-border-width: 1; -fx-padding: 14 18;">
+                        <Label text="APPROUVÉES"
+                               style="-fx-text-fill: rgba(63,169,245,0.7); -fx-font-size: 9px; -fx-font-weight: bold;"/>
+                        <Label fx:id="approvedRequestsLabel" text="0"
+                               style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                        <Label text="acceptées"
+                               style="-fx-text-fill: rgba(63,169,245,0.6); -fx-font-size: 10px;"/>
+                    </VBox>
+
+                    <!-- Refusées -->
+                    <VBox style="-fx-background-color: rgba(255,255,255,0.08);
+                                 -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 10;
+                                 -fx-background-radius: 10; -fx-border-width: 1; -fx-padding: 14 18;">
+                        <Label text="REFUSÉES"
+                               style="-fx-text-fill: rgba(63,169,245,0.7); -fx-font-size: 9px; -fx-font-weight: bold;"/>
+                        <Label fx:id="rejectedRequestsLabel" text="0"
+                               style="-fx-text-fill: #f87171; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                        <Label text="rejetées"
+                               style="-fx-text-fill: rgba(63,169,245,0.6); -fx-font-size: 10px;"/>
+                    </VBox>
+
+                </HBox>
+
+                <!-- Boutons action alignés à droite -->
+                <VBox spacing="8" alignment="CENTER_RIGHT">
+                    <Button fx:id="statsButton" text="📊 Statistiques &amp; Export"
+                            onAction="#handleShowStats"
+                            style="-fx-background-color: rgba(255,255,255,0.10);
+                                   -fx-text-fill: white; -fx-font-size: 12px; -fx-font-weight: bold;
+                                   -fx-padding: 9 18; -fx-background-radius: 8; -fx-cursor: hand;
+                                   -fx-border-color: rgba(255,255,255,0.30); -fx-border-width: 1;
+                                   -fx-border-radius: 8;">
+                        <font><Font name="System Bold" size="12.0"/></font>
+                    </Button>
+                    <Button fx:id="refreshButton" text="🔄 Actualiser"
+                            style="-fx-background-color: rgba(255,255,255,0.10);
+                                   -fx-text-fill: white; -fx-font-size: 12px; -fx-font-weight: bold;
+                                   -fx-padding: 9 18; -fx-background-radius: 8; -fx-cursor: hand;
+                                   -fx-border-color: rgba(255,255,255,0.30); -fx-border-width: 1;
+                                   -fx-border-radius: 8;">
+                        <font><Font name="System Bold" size="12.0"/></font>
+                    </Button>
+                </VBox>
+
+            </HBox>
+        </VBox>
+
+        <!-- ===== STATISTIQUES (cartes blanches, style Formation) ===== -->
+        <HBox spacing="16" style="-fx-padding: 20 32 0 32;">
+
+            <!-- Total Demandes -->
+            <VBox spacing="6" HBox.hgrow="ALWAYS"
+                  style="-fx-background-color: white; -fx-border-radius: 12; -fx-background-radius: 12;
+                         -fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-padding: 18;
+                         -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <VBox style="-fx-background-color: rgba(20,94,183,0.10); -fx-background-radius: 8;
+                                 -fx-padding: 8;">
+                        <Label text="📋" style="-fx-font-size: 16px;"/>
+                    </VBox>
+                    <Label text="Total" style="-fx-font-size: 11px; -fx-font-weight: bold;
+                                               -fx-text-fill: #022E69;
+                                               -fx-background-color: rgba(20,94,183,0.10);
+                                               -fx-background-radius: 5; -fx-padding: 3 7;"/>
+                </HBox>
+                <Label fx:id="totalRequestsCardLabel" text="0"
+                       style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #1a202c;"/>
+                <Label text="Demandes"
+                       style="-fx-font-size: 12px; -fx-text-fill: #94a3b8; -fx-font-weight: bold;"/>
+                <Region prefHeight="4" style="-fx-background-color: linear-gradient(to right, #145EB7, #3FA9F5);
+                                              -fx-background-radius: 2;"/>
+            </VBox>
+
+            <!-- En Attente -->
+            <VBox spacing="6" HBox.hgrow="ALWAYS"
+                  style="-fx-background-color: white; -fx-border-radius: 12; -fx-background-radius: 12;
+                         -fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-padding: 18;
+                         -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <VBox style="-fx-background-color: #fef3c7; -fx-background-radius: 8; -fx-padding: 8;">
+                        <Label text="⏳" style="-fx-font-size: 16px;"/>
+                    </VBox>
+                </HBox>
+                <Label fx:id="pendingRequestsCardLabel" text="0"
+                       style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #d97706;"/>
+                <Label text="En Attente"
+                       style="-fx-font-size: 12px; -fx-text-fill: #94a3b8; -fx-font-weight: bold;"/>
+                <Region prefHeight="4" style="-fx-background-color: linear-gradient(to right, #f59e0b, #fb923c);
+                                              -fx-background-radius: 2;"/>
+            </VBox>
+
+            <!-- Approuvées -->
+            <VBox spacing="6" HBox.hgrow="ALWAYS"
+                  style="-fx-background-color: white; -fx-border-radius: 12; -fx-background-radius: 12;
+                         -fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-padding: 18;
+                         -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <VBox style="-fx-background-color: #dcfce7; -fx-background-radius: 8; -fx-padding: 8;">
+                        <Label text="✅" style="-fx-font-size: 16px;"/>
+                    </VBox>
+                </HBox>
+                <Label fx:id="approvedRequestsCardLabel" text="0"
+                       style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #16a34a;"/>
+                <Label text="Approuvées"
+                       style="-fx-font-size: 12px; -fx-text-fill: #94a3b8; -fx-font-weight: bold;"/>
+                <Region prefHeight="4" style="-fx-background-color: linear-gradient(to right, #22c55e, #14b8a6);
+                                              -fx-background-radius: 2;"/>
+            </VBox>
+
+            <!-- Refusées -->
+            <VBox spacing="6" HBox.hgrow="ALWAYS"
+                  style="-fx-background-color: white; -fx-border-radius: 12; -fx-background-radius: 12;
+                         -fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-padding: 18;
+                         -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <VBox style="-fx-background-color: #fee2e2; -fx-background-radius: 8; -fx-padding: 8;">
+                        <Label text="❌" style="-fx-font-size: 16px;"/>
+                    </VBox>
+                </HBox>
+                <Label fx:id="rejectedRequestsCardLabel" text="0"
+                       style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #dc2626;"/>
+                <Label text="Refusées"
+                       style="-fx-font-size: 12px; -fx-text-fill: #94a3b8; -fx-font-weight: bold;"/>
+                <Region prefHeight="4" style="-fx-background-color: linear-gradient(to right, #ef4444, #f97316);
+                                              -fx-background-radius: 2;"/>
+            </VBox>
+
+        </HBox>
+
+        <!-- ===== DEMANDES (sous-vue) ===== -->
+        <VBox style="-fx-padding: 20 32 0 32;">
+            <fx:include fx:id="leaveRequests" source="RHLeaveRequestsView.fxml"/>
+        </VBox>
+
+        <!-- ===== SOLDES (sous-vue) ===== -->
+        <VBox style="-fx-padding: 16 32 0 32;">
+            <fx:include fx:id="leaveBalances" source="RHLeaveBalancesView.fxml"/>
+        </VBox>
+
+        <!-- Padding bas de page -->
+        <Region prefHeight="24"/>
+
+    </VBox>
+</ScrollPane>

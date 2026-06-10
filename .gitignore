@@ -1,0 +1,39 @@
+# ----------------------------------------------------------------------------
+# HR-Flow — ROOT .gitignore
+# Sub-projects (HrFlow-Web, HrFlow-Desktop) have their own .gitignore files.
+# ----------------------------------------------------------------------------
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+*.ipr
+*.iws
+
+# Node (only if tooling is added at the repo root)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Log files
+*.log
+logs/
+
+# ----------------------------------------------------------------------------
+# Secrets — NEVER commit .env files — they contain secrets
+# ----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example

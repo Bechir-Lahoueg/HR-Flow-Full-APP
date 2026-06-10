@@ -1,0 +1,268 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes Entretiens | HrFlow{% endblock %}
+
+{% block stylesheets %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #f5f6f8; color: #1a1d23; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .card-anim { animation: fadeUp 0.4s cubic-bezier(.22,1,.36,1) both; }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e8eaed;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .card.today  { border-color: #c4b5fd; box-shadow: 0 0 0 3px #ede9fe; }
+        .card.future { border-color: #a8dcfb; }
+        .card.past   { border-color: #e8eaed; opacity: .85; }
+
+        .chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 99px;
+            font-size: 11px; font-weight: 700;
+        }
+
+        .detail-row {
+            display: flex; align-items: flex-start; gap: 12px;
+        }
+        .detail-icon {
+            width: 34px; height: 34px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+
+        .tip-item {
+            display: flex; align-items: flex-start; gap: 8px;
+            font-size: 12px; color: #0d3d6f; line-height: 1.5;
+        }
+
+        .btn-join {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 16px; border-radius: 9px;
+            background: #145EB7; color: #fff; font-weight: 600; font-size: 13px;
+            text-decoration: none; transition: background .15s;
+        }
+        .btn-join:hover { background: #0d3d6f; }
+
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 20px; border-radius: 10px;
+            background: #145EB7; color: #fff; font-weight: 600; font-size: 13px;
+            border: none; cursor: pointer; text-decoration: none;
+            transition: background .15s, box-shadow .15s, transform .12s;
+        }
+        .btn-primary:hover { background: #0d3d6f; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(20,94,183,.25); }
+
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center; padding: 72px 24px;
+            background: #fff; border: 1px solid #e8eaed; border-radius: 16px;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div style="min-height:100vh; background:#f5f6f8;">
+    {% include 'Candidate/components/_header.html.twig' %}
+
+    <main style="max-width:1000px; margin:0 auto; padding:28px 20px 60px;">
+
+        {# Header #}
+        <div style="margin-bottom:24px;" class="card-anim">
+            <h1 style="font-size:22px; font-weight:700; color:#1a1d23; margin:0 0 4px;">Mes entretiens</h1>
+            <p style="font-size:14px; color:#6b7280; margin:0;">Préparez-vous et suivez l'avancement de votre processus de recrutement.</p>
+        </div>
+
+        {% if interviews|length > 0 %}
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                {% for i, interview in interviews %}
+                    {% set isPast   = interview.interviewDate < date() %}
+                    {% set isToday  = interview.interviewDate|date('Y-m-d') == 'now'|date('Y-m-d') %}
+                    {% set cardClass = isToday ? 'today' : (isPast ? 'past' : 'future') %}
+
+                    <article class="card {{ cardClass }} card-anim" style="animation-delay:{{ (i * 0.07) }}s;">
+
+                        {# Card Header Strip #}
+                        <div style="padding:18px 22px; border-bottom:1px solid #f1f3f5;
+                            background:{{ isToday ? '#faf5ff' : (isPast ? '#fafbfc' : '#e8f6fe') }};">
+                            <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px;">
+
+                                <div style="display:flex; align-items:center; gap:14px;">
+                                    {# Date Badge #}
+                                    <div style="width:56px; height:56px; border-radius:12px; flex-shrink:0;
+                                        display:flex; flex-direction:column; align-items:center; justify-content:center;
+                                        background:{{ isToday ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : (isPast ? '#94a3b8' : 'linear-gradient(135deg,#145EB7,#145EB7)') }};
+                                        color:#fff;">
+                                        <span style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; opacity:.85;">
+                                            {{ interview.interviewDate|date('M') }}
+                                        </span>
+                                        <span style="font-size:22px; font-weight:700; line-height:1.1;">
+                                            {{ interview.interviewDate|date('d') }}
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:4px;">
+                                            <h2 style="font-size:16px; font-weight:700; color:#1a1d23; margin:0;">
+                                                {{ interview.application.jobOffer.title }}
+                                            </h2>
+                                            {% if isToday %}
+                                                <span class="chip" style="background:#7c3aed; color:#fff;">
+                                                    <span style="width:5px;height:5px;border-radius:50%;background:#fff;"></span>
+                                                    Aujourd'hui
+                                                </span>
+                                            {% elseif isPast %}
+                                                <span class="chip" style="background:#f1f5f9; color:#64748b;">Passé</span>
+                                            {% else %}
+                                                <span class="chip" style="background:#d0edfd; color:#0d3d6f;">
+                                                    <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                    À venir
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <span style="font-size:13px; color:#6b7280; display:flex; align-items:center; gap:5px;">
+                                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <strong style="color:#374151;">{{ interview.interviewDate|date('H:i') }}</strong>
+                                            &nbsp;·&nbsp;
+                                            {{ interview.interviewDate|date('d M Y') }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {# Result badge for past #}
+                                {% if isPast and interview.result is defined %}
+                                    {% if interview.result == 'PASSED' %}
+                                        <span class="chip" style="background:#d0edfd; color:#0d3d6f; border:1px solid #a8dcfb; padding:7px 14px;">
+                                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                            Retenu
+                                        </span>
+                                    {% elseif interview.result == 'FAILED' %}
+                                        <span class="chip" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; padding:7px 14px;">
+                                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            Non retenu
+                                        </span>
+                                    {% else %}
+                                        <span class="chip" style="background:#fffbeb; color:#92400e; border:1px solid #fef3c7; padding:7px 14px;">
+                                            En attente
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {# Card Body #}
+                        <div style="padding:20px 22px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+                                {# Details Column #}
+                                <div style="display:flex; flex-direction:column; gap:14px;">
+                                    <div class="detail-row">
+                                        <div class="detail-icon" style="background:{{ isToday ? '#f5f3ff' : '#f8f9fa' }};">
+                                            <svg width="15" height="15" fill="none" stroke="{{ isToday ? '#7c3aed' : '#6b7280' }}" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em; margin:0 0 2px;">Type d'entretien</p>
+                                            <p style="font-size:14px; font-weight:600; color:#1a1d23; margin:0;">{{ interview.type }}</p>
+                                        </div>
+                                    </div>
+
+                                    {% if interview.location %}
+                                        <div class="detail-row">
+                                            <div class="detail-icon" style="background:#eff6ff;">
+                                                <svg width="15" height="15" fill="none" stroke="#2563eb" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em; margin:0 0 2px;">Lieu</p>
+                                                <p style="font-size:14px; font-weight:600; color:#1a1d23; margin:0;">{{ interview.location }}</p>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if interview.meetingLink %}
+                                        <div class="detail-row">
+                                            <div class="detail-icon" style="background:#e8f6fe;">
+                                                <svg width="15" height="15" fill="none" stroke="#145EB7" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px;">Lien de réunion</p>
+                                                <a href="{{ interview.meetingLink }}" target="_blank" class="btn-join">
+                                                    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                                    Rejoindre l'appel
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                {# Right: Tips or Feedback #}
+                                {% if isPast and interview.feedback is defined and interview.feedback %}
+                                    <div style="background:#f8f9fa; border:1px solid #f1f3f5; border-radius:12px; padding:16px;">
+                                        <p style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px; display:flex; align-items:center; gap:5px;">
+                                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                            Retour du recruteur
+                                        </p>
+                                        <p style="font-size:13px; color:#374151; line-height:1.6; margin:0;">{{ interview.feedback }}</p>
+                                    </div>
+                                {% elseif not isPast %}
+                                    <div style="background:#e8f6fe; border:1px solid #a8dcfb; border-radius:12px; padding:16px;">
+                                        <p style="font-size:10px; font-weight:700; color:#0d3d6f; text-transform:uppercase; letter-spacing:.06em; margin:0 0 12px; display:flex; align-items:center; gap:5px;">
+                                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                            Conseils de préparation
+                                        </p>
+                                        <div style="display:flex; flex-direction:column; gap:8px;">
+                                            {% for tip in [
+                                                'Recherchez l\'entreprise et le poste en détail',
+                                                'Préparez des questions pertinentes à poser',
+                                                'Connectez-vous 5 min avant (entretien en ligne)',
+                                                'Ayez votre CV et portfolio à portée de main'
+                                            ] %}
+                                                <div class="tip-item">
+                                                    <svg width="13" height="13" fill="none" stroke="#145EB7" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                    {{ tip }}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div style="display:flex; align-items:center; justify-content:center; background:#fafbfc; border:1.5px dashed #e5e7eb; border-radius:12px; padding:20px;">
+                                        <p style="font-size:13px; color:#9ca3af; text-align:center; margin:0;">Aucun retour disponible pour le moment.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <div class="empty-state card-anim">
+                <div style="width:64px; height:64px; border-radius:16px; background:#f1f3f5; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+                    <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <h3 style="font-size:18px; font-weight:700; color:#1a1d23; margin:0 0 8px;">Aucun entretien programmé</h3>
+                <p style="font-size:14px; color:#6b7280; margin:0 0 24px; max-width:320px; line-height:1.6;">Postulez aux offres qui vous intéressent pour être invité à des entretiens.</p>
+                <a href="{{ path('app_candidate_job_offers') }}" class="btn-primary">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Parcourir les offres
+                </a>
+            </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}
